@@ -1,0 +1,6 @@
+pool = 15
+usage of a thread \approx 5%
+ave time of a thread= 
+what....why are there completely identical merits???
+
+spare one core for other usage... I have only 1 computer and still need to do homework...

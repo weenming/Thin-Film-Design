@@ -5,33 +5,6 @@ from numpy import *
 from gets.get_n import get_n
 
 
-# def inserted_layers(d, materials, insert_layer_num, insert_position, insert_thickness):
-#     '''
-#
-#     :param d:
-#     :param materials:
-#     :param insert_layer_num:
-#     :param insert_position:
-#     :param insert_thickness:
-#     :return: inserted d and materials
-#     '''''
-#     assert d[insert_layer_num] > insert_position, 'insert position out of range of the inserted layer'
-#     if materials[insert_layer_num] == 'SiO2_OIC':
-#         insert_material = 'Nb2O5_OIC'
-#         inserted_material = 'SiO2_OIC'
-#     elif materials[insert_layer_num] == 'Nb2O5_OIC':
-#         insert_material = 'SiO2_OIC'
-#         inserted_material = 'Nb2O5_OIC'
-#
-#     insert_layer_num
-#     materials_new = insert(materials, insert_layer_num, inserted_material)
-#     materials_new = insert(materials_new, insert_layer_num + 1, insert_material)
-#     d_new = insert(d, insert_layer_num, insert_position)
-#     d_new[insert_layer_num + 1] -= insert_position
-#     d_new = insert(d_new, insert_layer_num + 1, insert_thickness)
-#     return d_new, materials_new
-
-
 def inserted_layers(d, materials, insert_layer_num, insert_position, insert_thickness=0.00001):
     # insert_layer_num 是插入前，被插入的层的index
     assert d[insert_layer_num] >= insert_position, 'insert position out of range of the inserted layer'
@@ -169,6 +142,13 @@ def get_insert_jacobi_faster(wls, d, materials, insert_search_pts, insert_thickn
                             ts * ts.conjugate() + tp * tp.conjugate()) / 2
                 jacobi[wl_index, j + i * insert_search_pts] = (R_new.real - R)/insert_thickness
                 jacobi[wl_index + wls.shape[0], j + i * insert_search_pts] = (T_new.real - T)/insert_thickness
+    return jacobi
+
+
+def get_insert_jacobi_faster_multi_inc(wls, d, materials, insert_search_pts, insert_thickness=0.00001, theta0=array([7])):
+    jacobi = zeros((2 * theta0.shape[0] * wls.shape[0], insert_search_pts * d.shape[0]))
+    for i in range(theta0.shape[0]):
+        jacobi[i * 2 * wls.shape[0]: (i + 1) * 2 * wls.shape[0], :] = get_insert_jacobi_faster(wls, d, materials, insert_search_pts, insert_thickness, theta0[i])
     return jacobi
 
 def get_insert_jacobi(wls, d, materials, insert_search_pts):

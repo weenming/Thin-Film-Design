@@ -1,7 +1,7 @@
 from numpy import *
 
 
-def get_n(wl, materials, n_indices=[]):
+def get_n(wl, materials, n_indices=[], substrate=None):
     """
     从色散参数算折射率, wl in nm
     :param wl:
@@ -14,14 +14,16 @@ def get_n(wl, materials, n_indices=[]):
     wl = wl*1e-3
     layer_number = materials.shape[0]
     # 吸收的系数，1是弱，2是正常，3强
-    k_parameters = {1: [4e5, 56.0, 1e-10], 2: [3e5, 50.0, 1e-8], 3: [4e4, 40.0, 1e-6]}
+    k_parameters = {1: [4e5, 56.0, 1e-10],
+                    2: [3e5, 50.0, 1e-8], 3: [4e4, 40.0, 1e-6]}
     # 为了存复数，创建ndarray的时候要指定
     n = zeros((layer_number+2, 1), dtype="complex_")
     # 从色散参数算复数折射率
     # 注意：自己加的两个材料折射率是错的，本来应该是μm单位，但是表达式被改成了nm单位。输入的λ是以μm为单位的。影响应该是色散被显著减弱了。
     # 这里已经改回来了：wl用微米表示
     # SiO2: Ghosh 1999 crystal, alpha-quartz
-    n_SiO2 = sqrt(1.28604141 + 1.07044083 * wl**2 / (wl**2 - 0.0100585997) + 1.10202242 * wl**2 / (wl**2 - 100.))
+    n_SiO2 = sqrt(1.28604141 + 1.07044083 * wl**2 /
+                  (wl**2 - 0.0100585997) + 1.10202242 * wl**2 / (wl**2 - 100.))
     # TiO2: Devore 1951 crystal
     n_TiO2 = sqrt(5.913+0.2441/(wl**2 - 0.0803))
 
@@ -35,18 +37,22 @@ def get_n(wl, materials, n_indices=[]):
     #
     # A0, A1, A2 = 1.460472, 0.0, 4.9867e-4
     # n_SiO2_OIC = A0 + A1 / wl ** 2 + A2 / wl ** 4 + delta_m
-
-    for i in range(layer_number + 2):
-        if i == 0:
-            # 入射介质：空气
-            n[i] = 1
-        elif i == layer_number+1:
+    n[0] = 1
+    for i in range(1, layer_number + 2):
+        if i == layer_number+1:
             # 基底: SiO2
             # B1, B2, B3, C1, C2, C3 = 1.03961, 0.23179, 1.01047, 0.006, 0.02, 103.56
             # n[i] = sqrt(
             #     1 + B1 * wl ** 2 / (wl ** 2 - C1) + B2 * wl ** 2 / (wl ** 2 - C2) + B3 * wl ** 2 / (wl ** 2 - C3))  #
             # n[i] = 1
-            n[i] = n_SiO2
+            if substrate == None:
+                n[i] = n_SiO2
+            elif substrate == 'TiO2':
+                n[i] = n_TiO2
+            elif substrate == 'SiO2':
+                n[i] = n_SiO2
+            else:
+                assert False, 'invalid substrate material'
         else:
 
             if materials[i-1] == 'TiO2':

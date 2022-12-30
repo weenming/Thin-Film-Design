@@ -2,7 +2,7 @@ from numpy import *
 from gets.get_n import get_n
 
 
-def get_spectrum(wls, d, materials, n_indices=[], theta0=7.):
+def get_spectrum(wls, d, materials, n_indices=[], theta0=7., substrate=None):
     """
     This function calculates the reflectance and transmittance spectrum of a non-polarized light at 0 degrees
 
@@ -20,7 +20,7 @@ def get_spectrum(wls, d, materials, n_indices=[], theta0=7.):
     for wl_index in range(wls.shape[0]):
         # 折射率 返回layer_number+2个数字，因为基底和空气也在里面
         wl = wls[wl_index]
-        n = get_n(wl, materials)
+        n = get_n(wl, materials, substrate=substrate)
         # 每一层的角度，theta[k]=theta_k,长度是layer_number+2
         cosis = zeros((layer_number + 2, 1), dtype='complex_')
         for i in range(layer_number + 2):
@@ -42,7 +42,7 @@ def get_spectrum(wls, d, materials, n_indices=[], theta0=7.):
 
         for i in range(1, layer_number + 1):
             # M(k)是M_k,在dimension3上的长度是layer_number+2. 还要注意到M_n+1是最先乘的.
-            # 只要是切片，就是ndarray，只有索引所有维度才能得到ndarray里的数字类型,注意到n[0]是空气,theta[0]也是空气，d[0]是第一层膜
+            # 只要是切片，就是ndarray，只有索引所有维度才能得到ndarray里的数据类型,注意到n[0]是空气,theta[0]也是空气，d[0]是第一层膜
             cosi = cosis[i, 0]
             phi = 2 * pi * 1j * cosi * n[i, 0] * d[i - 1] / wl
 
@@ -76,7 +76,14 @@ def get_spectrum(wls, d, materials, n_indices=[], theta0=7.):
         tp = 1 / Wp[0, 0]
         R = (rs * rs.conjugate() + rp * rp.conjugate()) / 2
         T = cosis[layer_number + 1, 0] / cos(theta0) * n[layer_number + 1, 0] * (
-                    ts * ts.conjugate() + tp * tp.conjugate()) / 2
+            ts * ts.conjugate() + tp * tp.conjugate()) / 2
         spectrum[wl_index, 0] = R.real
         spectrum[wl_index + wls.shape[0], 0] = T.real
     return spectrum
+
+
+def get_spectrum_multi_inc(wls, d, materials, theta0=array([7.]), substrate=None):
+    spec = zeros((2 * theta0.shape[0] * wls.shape[0], 1))
+    for i in range(theta0.shape[0]):
+        spec[i * 2 * wls.shape[0]: (i + 1) * 2 * wls.shape[0], :] = get_spectrum(wls, d, materials, theta0=theta0[i], substrate=substrate)
+    return spec

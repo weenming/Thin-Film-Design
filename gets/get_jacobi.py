@@ -297,3 +297,9 @@ def get_jacobi(wls, d, materials, n_indices=[], theta0 = 7.):
             #                                                                         ).real
 
     return jacobi
+
+def get_jacobi_multi_inc(wls, d, materials, theta0=array([7])):
+    jacobi = zeros((2 * theta0.shape[0] * wls.shape[0], d.shape[0]))
+    for i in range(theta0.shape[0]):
+        jacobi[i * 2 * wls.shape[0]: (i + 1) * 2 * wls.shape[0], :] = get_jacobi(wls, d, materials, theta0[i])[:, 0:d.shape[0]]
+    return jacobi

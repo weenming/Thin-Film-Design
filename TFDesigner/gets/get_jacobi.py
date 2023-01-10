@@ -1,11 +1,10 @@
 import sys
-sys.path.append('C:/Users/weenming/OneDrive/Ellipsometry/Needle optimization using TFNN/python_code')
 
 from numpy import *
-from gets.get_n import get_n
+from get_n import get_n
 
 
-def get_jacobi(wls, d, materials, n_indices=[], theta0 = 7.):
+def get_jacobi(wls, d, materials, n_indices=[], theta0=7.):
     """
     This function calculates the gradient of the loss function against the thicknesses and refractive indices.
 
@@ -98,10 +97,12 @@ def get_jacobi(wls, d, materials, n_indices=[], theta0 = 7.):
 
         partial_Ws_r[layer_number + 1, 0:, 0:] = array(
             [[-Ws[layer_number + 1, 1, 0] / Ws[layer_number + 1, 0, 0] ** 2, 0], [1 / Ws[layer_number + 1, 0, 0], 0]])
-        partial_Ws_t[layer_number + 1, 0:, 0:] = array([[-1 / Ws[layer_number + 1, 0, 0] ** 2, 0], [0, 0]])
+        partial_Ws_t[layer_number + 1, 0:,
+                     0:] = array([[-1 / Ws[layer_number + 1, 0, 0] ** 2, 0], [0, 0]])
         partial_Wp_r[layer_number + 1, 0:, 0:] = array(
             [[-Wp[layer_number + 1, 1, 0] / Wp[layer_number + 1, 0, 0] ** 2, 0], [1 / Wp[layer_number + 1, 0, 0], 0]])
-        partial_Wp_t[layer_number + 1, 0:, 0:] = array([[-1 / Wp[layer_number + 1, 0, 0] ** 2, 0], [0, 0]])
+        partial_Wp_t[layer_number + 1, 0:,
+                     0:] = array([[-1 / Wp[layer_number + 1, 0, 0] ** 2, 0], [0, 0]])
 
         # 递推得到各个partialW
         for i in range(1, layer_number + 1):
@@ -127,7 +128,8 @@ def get_jacobi(wls, d, materials, n_indices=[], theta0 = 7.):
             # 知道partialM[k] (k从1开始，到layer_number指各层膜。), 对应partial_x[k-1]
 
             cosi = cosis[layer_number + 1 - i, 0]
-            phi = 2 * pi * 1j * cosi * n[layer_number + 1 - i, 0] * d[layer_number - i] / wl
+            phi = 2 * pi * 1j * cosi * \
+                n[layer_number + 1 - i, 0] * d[layer_number - i] / wl
             di = d[layer_number - i]
             ni = n[layer_number + 1 - i, 0]
             coshi = cosh(phi)
@@ -298,8 +300,10 @@ def get_jacobi(wls, d, materials, n_indices=[], theta0 = 7.):
 
     return jacobi
 
+
 def get_jacobi_multi_inc(wls, d, materials, theta0=array([7])):
     jacobi = zeros((2 * theta0.shape[0] * wls.shape[0], d.shape[0]))
     for i in range(theta0.shape[0]):
-        jacobi[i * 2 * wls.shape[0]: (i + 1) * 2 * wls.shape[0], :] = get_jacobi(wls, d, materials, theta0[i])[:, 0:d.shape[0]]
+        jacobi[i * 2 * wls.shape[0]: (i + 1) * 2 * wls.shape[0], :] = get_jacobi(
+            wls, d, materials, theta0[i])[:, 0:d.shape[0]]
     return jacobi

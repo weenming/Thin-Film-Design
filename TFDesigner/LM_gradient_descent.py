@@ -1,6 +1,6 @@
 import numpy as np
-from get_jacobi import get_jacobi
-from get_spectrum import get_spectrum
+from gets.get_jacobi import get_jacobi
+from gets.get_spectrum import get_spectrum
 import time
 
 

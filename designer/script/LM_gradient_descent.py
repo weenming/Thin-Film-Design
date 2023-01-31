@@ -36,7 +36,7 @@ def LM_optimize_d_simple(film: FilmSimple, target_film: FilmSimple, h_tol, max_s
     # d: current d of designed film
     d = film.get_d()
 
-    # allocate space for J and f
+    # TODO: allocate memory for J and f
 
     # before first iteration, calculate g and A
     J = stack_J(J, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls)
@@ -62,15 +62,24 @@ def LM_optimize_d_simple(film: FilmSimple, target_film: FilmSimple, h_tol, max_s
             if d_new[i] < 0:
                 d_new[i] = 0
 
-        f_new = stack_f(f_new, wls_ls, d_new, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls, 
-                        target_spectrum)
-        F_dnew = (f_new ** 2).sum()
+        f_new = stack_f(f_new, wls_ls, d_new, n_layers_ls, n_sub_ls, n_inc_ls, 
+                        inc_ang_ls, target_spectrum)
+        F_dnew = np.sum(np.square(f_new))
         rho = (F_d - F_dnew) / np.dot(h.T, mu * h - g).item()
 
         # Accept this move by merit
         if rho > 0:
             d = d_new.copy()
+            # Here f points to the space of f_new and the old the reference count 
+            # of f -=1.
+            # Thus to keep the space of f from being recycled, a tmp reference is 
+            # added. 
+            tmp = f
             f = f_new
+            f_new = tmp
+            # After the "swap", f_new now points to the location of where f was. 
+            # It does not matter that f_new now has dirty data becaus f_new will
+            # be updated before next time F_new is calculated based on it.
             g = np.dot(J.T, f)
             A = np.dot(J.T, J)
             mu = mu * \
@@ -88,24 +97,27 @@ def LM_optimize_d_simple(film: FilmSimple, target_film: FilmSimple, h_tol, max_s
 
 
 
-def stack_f(wls_num, layer_num, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls, target_spec):
+def stack_f(f_old, wls_num, layer_num, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, 
+            inc_ang_ls, target_spec):
     """
     target specs may have to be calculated using different params
 
     This implementation uses dynamic sized list...
 
     Arguments:
+        f_old:
+            Old postion of f. Its size does not change in a LM optimization so the 
+            memory only needs to be allocated once at initialization.
         wls_num (int):
             sum of number of wl points in the wls_ls
         layer_num (int):
             layer number
     """
-    f = np.empty(wls_num)
     i = 0
     for wls, inc_ang in zip(wls_ls, inc_ang_ls):
         this_wls_num = wls.shape[0]
-        f[i: i + this_wls_num] = get_spectrum(
-            wls, 
+        f_old[i: i + this_wls_num] = get_spectrum(
+            wls,
             d,
             n_layers_ls[-1],
             n_sub_ls[-1], 
@@ -114,19 +126,19 @@ def stack_f(wls_num, layer_num, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_
         )[:wls.shape[0], :]
         i += this_wls_num
     
-    f = f - target_spec
-    return f
+    f_old = f_old - target_spec
+    return
 
-def stack_J(wls_num, layer_num, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls):
+def stack_J(J_old, wls_num, layer_num, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, 
+            inc_ang_ls):
     """
     target specs may have to be calculated using different params
     """
-    J = np.empty((wls_num, layer_num))
     i = 0
     for wls, inc_ang in zip(wls_ls, inc_ang_ls):
         this_wls_num = wls.shape[0]
         # only reflectance
-        J[i: i + this_wls_num] = get_jacobi(
+        J_old[i: i + this_wls_num, :] = get_jacobi(
             wls, 
             d,
             n_layers_ls[-1],
@@ -136,5 +148,5 @@ def stack_J(wls_num, layer_num, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_
         )[:wls.shape[0], :]
         i += this_wls_num
         
-    return J
+    return
 

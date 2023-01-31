@@ -47,3 +47,7 @@ Use functions from `cmath` or `math` in kernel or device functions. `cmath` supp
 Unsupported numpy functions:
   - array methods.
   - functions that returns a new array.
+In other words, basically only scaler functions are implemented in Numba. [ref](https://numba.discourse.group/t/usage-of-cuda-python-linear-algebra-on-gpu-and-computational-code/1064) 
+[document](https://numba.readthedocs.io/en/stable/cuda/cudapysupported.html#numpy-support)
+
+After calculation of backward rpopagation and acquiring of Jacobi matrix, it seems that Cupy can also be used.

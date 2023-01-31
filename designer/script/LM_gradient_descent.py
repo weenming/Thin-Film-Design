@@ -36,9 +36,11 @@ def LM_optimize_d_simple(film: FilmSimple, target_film: FilmSimple, h_tol, max_s
     # d: current d of designed film
     d = film.get_d()
 
+    # allocate space for J and f
+
     # before first iteration, calculate g and A
-    J = stack_J(wls_number, layer_number, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls)
-    f = stack_f(wls_number, layer_number, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls, 
+    J = stack_J(J, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls)
+    f = stack_f(f, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls, 
                 target_spectrum)
     g = np.dot(J.T, f)
     A = np.dot(J.T, J)
@@ -46,8 +48,8 @@ def LM_optimize_d_simple(film: FilmSimple, target_film: FilmSimple, h_tol, max_s
     mu = 1
 
     for step_count in range(max_step):
-        J = stack_J(wls_number, layer_number, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls)
-        f = stack_f(wls_number, layer_number, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls, 
+        J = stack_J(J, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls)
+        f = stack_f(f, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls, 
                     target_spectrum)
         h = np.dot(np.linalg.inv(A + mu * np.identity(layer_number)), -g)
         d_new = d + h
@@ -60,7 +62,7 @@ def LM_optimize_d_simple(film: FilmSimple, target_film: FilmSimple, h_tol, max_s
             if d_new[i] < 0:
                 d_new[i] = 0
 
-        f_new = stack_f(wls_number, layer_number, wls_ls, d_new, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls, 
+        f_new = stack_f(f_new, wls_ls, d_new, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls, 
                         target_spectrum)
         F_dnew = (f_new ** 2).sum()
         rho = (F_d - F_dnew) / np.dot(h.T, mu * h - g).item()
@@ -79,6 +81,7 @@ def LM_optimize_d_simple(film: FilmSimple, target_film: FilmSimple, h_tol, max_s
             nu = 2 * nu
         if np.max(np.abs(h)).item() < h_tol:
             break
+
     film.update_d(d)
     film.check_thickness()
     film.remove_negative_thickness_layer()

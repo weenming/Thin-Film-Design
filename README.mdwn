@@ -11,14 +11,18 @@ The aim of this project is
   - lower layer numbers
   - fewer "super thin" layers which is impractical in realistic manufacture.
 ## File structure
-```
-./design
-    main.py
-./gets
-    get_spectrum.py
-    get_jacobi.py
-    get_insert_jacobi.py
-```
+
+- `script`
+  - `TFNN` implements training of TFNN  
+    - `get_insert_jacobi.py` Calculate insertion Jacobi matrix for gradient in needle method using TFNN
+    - `get_jacobi.py` Calculate Jacobi matrix in gradient descent using TFNN
+    - `get_n.py` Calculate and set refractive indices in Film instances
+    - `get_spectrum.py` Calculate spectrum from a film instance
+  - `design.py`
+  - `film.py`
+  - `LM_gradient_descent.py`
+  - `needle_insert.py`
+
 `main` files implements
 - LM descent
 - needle insertion iterations

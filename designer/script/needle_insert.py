@@ -1,5 +1,8 @@
+import numpy as np
+import film
 
-def inserted_layers(d, materials, insert_layer_num, insert_position, insert_thickness=0.00001):
+
+def inserted_layers(film1: film.Film, insert_layer_num, insert_position, insert_thickness=0.0000):
     # insert_layer_num 是插入前，被插入的层的index
     assert d[insert_layer_num] >= insert_position, 'insert position out of range of the inserted layer'
     if materials[insert_layer_num] == 'SiO2_OIC':
@@ -22,29 +25,6 @@ def inserted_layers(d, materials, insert_layer_num, insert_position, insert_thic
     d_new[i + 1] -= insert_position
     d_new = np.insert(d_new, i + 1, insert_thickness)
     return d_new, materials_new
-
-
-def insert_in_the_end(d, materials, insert_thickness, insert_material):
-    # for i in range(d.shape[0]):
-    #     if d[i] == 0:
-    #         print('zero thickness!')
-    #         d = np.delete(d, i)
-
-    if insert_material == materials[-1]:
-        d[-1] += insert_thickness
-    else:
-        d = np.append(d, insert_thickness)
-        materials = np.append(materials, insert_material)
-
-    i = 0
-    while i <= d.shape[0] - 2:
-        if materials[i] == materials[i + 1]:
-            d[i] += d[i + 1]
-            d = np.delete(d, i + 1)
-            materials = np.delete(materials, i + 1)
-            i -= 1
-        i += 1
-    return d, materials
 
 
 def insert_1_layer(wls, target_spec, d, materials, insert_search_pts):

@@ -16,15 +16,18 @@ def LM_optimize_d_simple(film: FilmSimple, target_film: FilmSimple, h_tol, max_s
     target_spectrum = np.array([])
     # other spectrum parameters are organized into a list by different inc_angs
     wls_ls = []
+    wls_number = 0
     inc_ang_ls = []
     # refractive indices also needs preparation
     n_layers_ls = []
     n_sub_ls = []
     n_inc_ls = []
+    
     for s in target_spec_ls:
         # only reflectance spectrum
         target_spectrum = np.append(target_spectrum, s.get_R())
         wls_ls.append(s.WLS)
+        wls_number += s.WLS.shape[0]
         inc_ang_ls.append(s.INC_ANG)
         n_layers_ls.append(film.calculate_n_array(s.WLS))
         n_sub_ls.append(film.calculate_n_sub(s.WLS))
@@ -34,8 +37,8 @@ def LM_optimize_d_simple(film: FilmSimple, target_film: FilmSimple, h_tol, max_s
     d = film.get_d()
 
     # before first iteration, calculate g and A
-    J = stack_J(wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls)
-    f = stack_f(wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls, 
+    J = stack_J(wls_number, layer_number, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls)
+    f = stack_f(wls_number, layer_number, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls, 
                 target_spectrum)
     g = np.dot(J.T, f)
     A = np.dot(J.T, J)
@@ -43,8 +46,8 @@ def LM_optimize_d_simple(film: FilmSimple, target_film: FilmSimple, h_tol, max_s
     mu = 1
 
     for step_count in range(max_step):
-        J = stack_J(wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls)
-        f = stack_f(wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls, 
+        J = stack_J(wls_number, layer_number, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls)
+        f = stack_f(wls_number, layer_number, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls, 
                     target_spectrum)
         h = np.dot(np.linalg.inv(A + mu * np.identity(layer_number)), -g)
         d_new = d + h
@@ -57,7 +60,7 @@ def LM_optimize_d_simple(film: FilmSimple, target_film: FilmSimple, h_tol, max_s
             if d_new[i] < 0:
                 d_new[i] = 0
 
-        f_new = stack_f(wls_ls, d_new, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls, 
+        f_new = stack_f(wls_number, layer_number, wls_ls, d_new, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls, 
                         target_spectrum)
         F_dnew = (f_new ** 2).sum()
         rho = (F_d - F_dnew) / np.dot(h.T, mu * h - g).item()
@@ -82,39 +85,53 @@ def LM_optimize_d_simple(film: FilmSimple, target_film: FilmSimple, h_tol, max_s
 
 
 
-def stack_f(wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls, target_spec):
+def stack_f(wls_num, layer_num, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls, target_spec):
     """
     target specs may have to be calculated using different params
-    """
-    f_ls = []
-    for wls, inc_ang in zip(wls_ls, inc_ang_ls):
-        f_ls.append(get_spectrum(
-        wls, 
-        d,
-        n_layers_ls[-1],
-        n_sub_ls[-1], 
-        n_inc_ls[-1], 
-        inc_ang[-1]
-    )[:wls.shape[0], :])
-    f = np.vstack(f_ls)
-    f = f - target_spec
-    return f
 
-def stack_J(wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls):
+    This implementation uses dynamic sized list...
+
+    Arguments:
+        wls_num (int):
+            sum of number of wl points in the wls_ls
+        layer_num (int):
+            layer number
     """
-    target specs may have to be calculated using different params
-    """
-    J_ls = []
+    f = np.empty(wls_num)
+    i = 0
     for wls, inc_ang in zip(wls_ls, inc_ang_ls):
-        # only reflectance
-        J_ls.append(get_jacobi(
+        this_wls_num = wls.shape[0]
+        f[i: i + this_wls_num] = get_spectrum(
             wls, 
             d,
             n_layers_ls[-1],
             n_sub_ls[-1], 
             n_inc_ls[-1], 
             inc_ang[-1]
-        )[:wls.shape[0], :])
-    J = np.vstack(J_ls)
+        )[:wls.shape[0], :]
+        i += this_wls_num
+    
+    f = f - target_spec
+    return f
+
+def stack_J(wls_num, layer_num, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls):
+    """
+    target specs may have to be calculated using different params
+    """
+    J = np.empty((wls_num, layer_num))
+    i = 0
+    for wls, inc_ang in zip(wls_ls, inc_ang_ls):
+        this_wls_num = wls.shape[0]
+        # only reflectance
+        J[i: i + this_wls_num] = get_jacobi(
+            wls, 
+            d,
+            n_layers_ls[-1],
+            n_sub_ls[-1], 
+            n_inc_ls[-1], 
+            inc_ang[-1]
+        )[:wls.shape[0], :]
+        i += this_wls_num
+        
     return J
 

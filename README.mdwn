@@ -39,3 +39,11 @@ The aim of this project is
   - instance has: refractive index of each layer at specified wl
 - conceal LM and insertions into modules, making main functions more concise and reduce duplicate code.
 - unit tests
+
+
+### CUDA
+
+Use functions from `cmath` or `math` in kernel or device functions. `cmath` supports complex number while `math` enables CUDA fastmath acceleration
+Unsupported numpy functions:
+  - array methods.
+  - functions that returns a new array.

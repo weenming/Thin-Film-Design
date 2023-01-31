@@ -1,22 +1,33 @@
-from numpy import *
-from gets.get_n import get_n
+import numpy as np
 
 
-def get_spectrum(wls, d, materials, n_indices=[], theta0=7., substrate=None):
+def get_spectrum(wls, d, n_layers, n_sub, n_inc, inc_ang):
     """
     This function calculates the reflectance and transmittance spectrum of a non-polarized light at 0 degrees
 
-    :param wls: wavelengths of the target spectrum
-    :param d: multi-layer thicknesses after last iteration
-    :param n_indices: denotes the dispersion details of a layer=
-    :param materials: material of a certain layer
-    :return: [zN*1 by 1 matrix], N是采样的波长数目，z=2因为T和R都测了；M是层数，厚度，partial/partial n 的实部和虚部
+    N是采样的波长数目, z=2因为T和R都测了; M是层数, 厚度, partial/partial n 的实部和虚部
+
+    Arguments:
+        wls (1d np.array): wavelengths of the target spectrum
+        d (1d np.array): multi-layer thicknesses after last iteration
+        n_layers (2d np.array): 
+            size: wls.shape[0] \cross d.shape[0]. refractive indices of each *layer*
+        n_sub (1d np.array):
+            refractive indices of the substrate
+        n_inc (1d np.array):
+            refractive indices of the incident material
+        inc_ang (float):
+            incident angle in degree
+
+    Returns:
+        size: 2 \cross wls.shape[0] spectrum (Reflectance spectrum + Transmittance spectrum).
     """
-    # 薄膜数，不算基底
+    # layer number of thin film, substrate not included
     layer_number = d.shape[0]
-    theta0 = theta0 / 180 * pi
-    # 遍历所有的待测波长，存到2N*1 spectrum里(先R再T)。
-    spectrum = zeros((2 * wls.shape[0], 1))
+    # convert incident angle in degree to rad
+    theta0 = theta0 / 180 * np.pi
+    # traverse all wl, save R and T to the 2N*1 np.array spectrum. [R, T]
+    spectrum = np.zeros((2 * wls.shape[0], 1))
     for wl_index in range(wls.shape[0]):
         # 折射率 返回layer_number+2个数字，因为基底和空气也在里面
         wl = wls[wl_index]
@@ -24,7 +35,7 @@ def get_spectrum(wls, d, materials, n_indices=[], theta0=7., substrate=None):
         # 每一层的角度，theta[k]=theta_k,长度是layer_number+2
         cosis = zeros((layer_number + 2, 1), dtype='complex_')
         for i in range(layer_number + 2):
-            cosis[i] = sqrt(1 - (sin(theta0)/n[i])**2)
+            cosis[i] = sqrt(1 - (sin(theta0) / n[i])**2)
 
         # 正向传播
         inv_D0_s = array([[0.5, 0.5 / cos(theta0)], [0.5, -0.5 / cos(theta0)]])
@@ -82,8 +93,4 @@ def get_spectrum(wls, d, materials, n_indices=[], theta0=7., substrate=None):
     return spectrum
 
 
-def get_spectrum_multi_inc(wls, d, materials, theta0=array([7.]), substrate=None):
-    spec = zeros((2 * theta0.shape[0] * wls.shape[0], 1))
-    for i in range(theta0.shape[0]):
-        spec[i * 2 * wls.shape[0]: (i + 1) * 2 * wls.shape[0], :] = get_spectrum(wls, d, materials, theta0=theta0[i], substrate=substrate)
-    return spec
+

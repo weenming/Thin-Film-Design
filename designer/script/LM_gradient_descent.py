@@ -1,6 +1,6 @@
 import numpy as np
 from gets.get_jacobi import get_jacobi
-from gets.get_spectrum import get_spectrum
+from gets.get_spectrum import get_spectrum_simple
 import time
 from film import calculate_merit
 from film import FilmSimple
@@ -116,7 +116,7 @@ def stack_f(f_old, wls_num, layer_num, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_l
     i = 0
     for wls, inc_ang in zip(wls_ls, inc_ang_ls):
         this_wls_num = wls.shape[0]
-        f_old[i: i + this_wls_num] = get_spectrum(
+        f_old[i: i + this_wls_num] = get_spectrum_simple(
             wls,
             d,
             n_layers_ls[-1],
@@ -138,7 +138,7 @@ def stack_J(J_old, wls_num, layer_num, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_l
     for wls, inc_ang in zip(wls_ls, inc_ang_ls):
         this_wls_num = wls.shape[0]
         # only reflectance
-        J_old[i: i + this_wls_num, :] = get_jacobi(
+        J_old[i: i + this_wls_num, :] = get_jacobi_simple(
             wls, 
             d,
             n_layers_ls[-1],

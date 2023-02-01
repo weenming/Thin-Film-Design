@@ -51,3 +51,5 @@ In other words, basically only scaler functions are implemented in Numba. [ref](
 [document](https://numba.readthedocs.io/en/stable/cuda/cudapysupported.html#numpy-support)
 
 After calculation of backward rpopagation and acquiring of Jacobi matrix, it seems that Cupy can also be used.
+
+Seems that not mannualy copying ary from host to device introduce more error

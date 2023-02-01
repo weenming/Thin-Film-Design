@@ -22,20 +22,21 @@ def call_ref_by_adr():
 @cuda.jit()
 def vec_add(a, b, res, size):
     pos = cuda.grid(1)
-    if pos < a.shape[0]:
+    if pos < size:
         # loading to device takes most of the time
         for _ in range(100):
-            cmath.exp(a[pos])
+            res[pos] = a[pos] + b[pos]
 
 
 def call_vec_add(N):
     a = cuda.to_device(np.random.random(N).astype(np.complex128))
     b = cuda.to_device(np.random.random(N).astype(np.complex128)) # np.dtype seems to work anyway
     res = cuda.device_array_like(a)
+    res = np.empty_like(a)
     
-    vec_add[1000, 64](a, b, res, N)
-    res.copy_to_host()
-    # print(res.copy_to_host())
+    vec_add[1000, 64](a, b, res, N / 2)
+    # res.copy_to_host()
+    print(res)
 
 def vec_add_cpu(N):
     a = np.random.random(N)
@@ -60,4 +61,4 @@ def comp_vecopr():
     plt.show()
 
 if __name__ == "__main__":
-    comp_vecopr()
+    call_vec_add(100)

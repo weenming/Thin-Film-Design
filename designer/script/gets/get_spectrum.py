@@ -5,17 +5,19 @@ from mat_lib import tps # transpose
 
 
 
-
-
-def get_spectrum(wls, d, n_layers, n_sub, n_inc, inc_ang):
+def get_spectrum_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
     """
     This function calculates the reflectance and transmittance spectrum of a non-polarized light at 0 degrees
 
     N是采样的波长数目, z=2因为T和R都测了; M是层数, 厚度, partial/partial n 的实部和虚部
 
     Arguments:
-        wls (1d np.array): wavelengths of the target spectrum
-        d (1d np.array): multi-layer thicknesses after last iteration
+        spectrum (1d np.array):
+            pre-allocated memory space for returning spectrum 
+        wls (1d np.array): 
+            wavelengths of the target spectrum
+        d (1d np.array):
+            multi-layer thicknesses after last iteration
         n_layers (2d np.array): 
             size: wls.shape[0] \cross d.shape[0]. refractive indices of each *layer*
         n_sub (1d np.array):
@@ -33,18 +35,44 @@ def get_spectrum(wls, d, n_layers, n_sub, n_inc, inc_ang):
     # convert incident angle in degree to rad
     inc_ang = inc_ang / 180 * np.pi
     # traverse all wl, save R and T to the 2N*1 np.array spectrum. [R, T]
-    spectrum = np.zeros((2 * wls.shape[0], 1))
-    # TODO: copy wls, d, n_layers, n_sub, n_inc, inc_ang to GPU
+    wls_size = wls.shape[0]
+    spectrum = np.empty(wls_size)
 
+    # TODO: move the copy of wls, n arr to outer loop (caller of spec, for example 
+    # LM optimizer) 
+    # Maybe allowing it to pass in additional device arr would be a good idea
+
+    # copy wls, d, n_layers, n_sub, n_inc, inc_ang to GPU
+    wls_device = cuda.to_device(wls)
+    d_device = cuda.to_device(d)
+    n_layers_device = cuda.to_device(n_layers) # n = n_layers[tid, layer_index]
+    n_sub_device = cuda.to_device(n_sub)
+    n_inc_device = cuda.to_device(n_inc)
+    # primitive transfer is not costly so I leave out inc_ang, wls_size and 
+    # layer_number
+    spectrum_device = cuda.device_array(wls_size) # only R spec
+    
     # invoke kernel
-
-
-    return spectrum
+    block_size = 32 # threads per block
+    grid_size = (wls_size + block_size - 1) // block_size # blocks per grid
+    forward_propagation[grid_size, block_size](
+        spectrum_device,
+        wls_device,
+        d_device, 
+        n_layers_device,
+        n_sub_device,
+        n_inc_device,
+        inc_ang,
+        wls_size,
+        layer_number
+    )
+    # copy to pre-allocated space
+    return spectrum_device.copy_to_host(spectrum)
 
 
 
 @cuda.jit
-def forward_propagation(wls, d, n_layers, n_sub, n_inc, inc_ang, wl_size, layer_number):
+def forward_propagation(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang, wl_size, layer_number):
     """
     n = n_layers[tid, layer_index]
     """

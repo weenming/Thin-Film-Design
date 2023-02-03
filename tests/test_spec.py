@@ -55,6 +55,8 @@ class TestFilm(unittest.TestCase):
         f.calculate_spectrum()
 
         # read expected spec from file
-        expected_spec = np.loadtxt("test_expecetd_spec1.txt", dtype="float")
+        expected_spec = np.loadtxt("expected_spectrum_simple_R_500to1000_30layer_SiO2-TiO2-times-15-SiO2_60inc.csv", dtype="float")
         self.assertAlmostEqual(get_spectrum(), expected_spec)
     
+if __name__ == "__main__":
+    unittest.main()

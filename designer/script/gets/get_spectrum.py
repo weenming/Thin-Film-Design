@@ -1,8 +1,8 @@
 import numpy as np
 import cmath
 from numba import cuda
-from mat_lib import mul # multiply
-from mat_lib import tps # transpose
+from gets.mat_lib import mul # multiply
+from gets.mat_lib import tps # transpose
 
 
 
@@ -151,7 +151,7 @@ def forward_propagation_simple(spectrum, wls, d, n_A, n_B, n_sub, n_inc,
         Wp = mul(Wp, Mp)
 
     # construct the last term D_{n+1} 
-    # technically this is not M which is D^{-1}PD but merely D 
+    # technically this is merely D which is not M (D^{-2}PD)
     Ms[0, 0] = 1.
     Ms[0, 1] = 1.
     Ms[1, 0] = n_sub * cos_sub

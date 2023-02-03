@@ -1,6 +1,9 @@
 import numpy as np
 
 
+def get_jacobi_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
+    return
+
 def get_jacobi(wls, d, n_layers, n_sub, n_inc, inc_ang):
     """
     This function calculates the gradient of the loss function against the thicknesses and refractive indices.

@@ -45,7 +45,12 @@ class TestFilm(unittest.TestCase):
         B = "TiO2"
         f = film.FilmSimple(A, B, substrate, d_expected)
         # must set spec before calculating spec
+        inc_ang = 60. # incident angle in degree
+        wls = np.linspace(500, 1000, 500)
         f.add_spec_param(inc_ang, wls)
         f.calculate_spectrum()
+
+        # read expected spec from file
+        expected_spec = np.loadtxt("test_expecetd_spec1.txt", dtype="float")
         self.assertAlmostEqual(get_spectrum(), expected_spec)
     

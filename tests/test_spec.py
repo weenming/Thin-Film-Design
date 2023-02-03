@@ -22,7 +22,8 @@ class TestFilm(unittest.TestCase):
         substrate = A = "SiO2"
         B = "TiO2"
         f = film.FilmSimple(A, B, substrate, d_expected)
-        self.assertAlmostEqual(f.get_d(), d_expected)
+        self.assertAlmostEqual(f.get_d().all(), d_expected.all())
+ 
 
     def test_film_change_d(self):
         layer_number = 100
@@ -38,13 +39,13 @@ class TestFilm(unittest.TestCase):
         f = film.FilmSimple(A, B, substrate, d_expected)
         f.add_spec_param(inc_ang, wls)
 
-        self.assertAlmostEqual(f.get_d(), d_expected)
-        self.assertAlmostEqual(f.calculate_n_array(wls), n_expected)
+        self.assertAlmostEqual(f.get_d().all(), d_expected.all())
+        self.assertAlmostEqual(f.calculate_n_array(wls).all(), n_expected.all())
 
     def test_film_spectrum(self):
         np.random.seed(1)
         d_expected = np.random.random(30) * 100
-        n_expected = np.array()
+        
         substrate = A = "TiO2"
         B = "SiO2"
         f = film.FilmSimple(A, B, substrate, d_expected)
@@ -55,6 +56,8 @@ class TestFilm(unittest.TestCase):
         f.calculate_spectrum()
 
         # read expected spec from file
-        expected_spec = np.loadtxt("test_expecetd_spec1.txt", dtype="float")
+        expected_spec = np.loadtxt("expected_spectrum_simple_R_500to1000_30layer_SiO2-TiO2-times-15-SiO2_60inc.csv", dtype="float")
         self.assertAlmostEqual(get_spectrum(), expected_spec)
     
+if __name__ == "__main__":
+    unittest.main()

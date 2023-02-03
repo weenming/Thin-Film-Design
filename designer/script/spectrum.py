@@ -41,7 +41,7 @@ class SpectrumSimple(Spectrum):
         self.n = film.calculate_n_array(self.WLS)
         self.n_sub = film.calculate_n_sub(self.WLS)
         self.n_inc = film.calculate_n_inc(self.WLS)
-        self.spec = None
+        self.spec = np.empty(self.WLS.shape[0])
         self.film = film
         self.updated = False
 
@@ -50,12 +50,12 @@ class SpectrumSimple(Spectrum):
 
     def calculate(self):
         # only R spectrum
-        self.spec = get_spectrum.get_spectrum_R(self.WLS,
+        get_spectrum.get_spectrum_simple(self.spec, self.WLS,
                                                 self.film.d,
                                                 self.n,
                                                 self.n_sub,
                                                 self.n_inc,
-                                                theta=self.INC_ANG
+                                                self.INC_ANG
                                                 )
         self.spec_R = self.spec[0, :]
         self.spec_T = self.spec[1, :]

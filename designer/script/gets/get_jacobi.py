@@ -1,26 +1,43 @@
 import numpy as np
+import cmath
+from numba import cuda
+from mat_lib import mul # multiply
+from mat_lib import tps # transpose
 
 
-def get_jacobi_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
-    return
-
-def get_jacobi(wls, d, n_layers, n_sub, n_inc, inc_ang):
+def get_jacobi_simple(jacobi, wls, d, n_layers, n_sub, n_inc, inc_ang):
     """
-    This function calculates the gradient of the loss function against the thicknesses and refractive indices.
+    This function calculates the Jacobi matrix of a given TFNN. Back 
+    propagation is implemented to acquire accurate result.
 
-    The multilayer structure has M layers(not including substrate) and the spectrum is measured at N=wls.shape(0) different wavelengths,
-    however, there are zN sampling points because both the transmittance and reflectance are measured
-
-    :param wls: wavelengths of the target spectrum
-    :param d: multi-layer thicknesses after last iteration
-    :param n_parameters: refraction indices after last iteration
-    :return: [zN by (3M)) matrix], N是采样的波长数目，z=2因为T和R都测了；M是层数，按照厚度，partial/partial n 的实部和虚部排列
+    Parameters:
+        jacobi (2d np.array):
+            pre-allocated memory space for returning jacobi
+        wls (1d np.array):
+            wavelengths of the target spectrum
+        d (1d np.array):
+            multi-layer thicknesses after last iteration
+        n_layers (2d np.array): 
+            size: wls.shape[0] \cross d.shape[0]. refractive indices of 
+            each *layer*
+        n_sub (1d np.array):
+            refractive indices of the substrate
+        n_inc (1d np.array):
+            refractive indices of the incident material
+        inc_ang (float):
+            incident angle in degree
     """
-    # number of layers
+    # layer number of thin film, substrate not included
     layer_number = d.shape[0]
-    # 入射角, 0°
-    theta0 = theta0 / 180 * pi
+    # convert incident angle in degree to rad
+    inc_ang_rad = inc_ang / 180 * np.pi
+    # traverse all wl, save R and T to the 2N*1 np.array spectrum. [R, T]
+    wls_size = wls.shape[0]
+    spectrum = np.empty(wls_size)
 
+
+
+def forward_and_back_propagation():
     # 遍历所有的待测波长 存到2N(R,T)*3M(d,n,k) jacobi matrix 里
     jacobi = zeros((2 * wls.shape[0], 3 * layer_number))
     for wl_index in range(wls.shape[0]):

@@ -39,10 +39,11 @@ class TestFilm(unittest.TestCase):
         self.assertAlmostEqual(f.calculate_n_array(wls), n_expected)
 
     def test_film_spectrum(self):
-        d_expected = np.array([i + 0.1 for i in range(100)])
+        np.random.seed(1)
+        d_expected = np.random.random(30) * 100
         n_expected = np.array()
-        substrate = A = "SiO2"
-        B = "TiO2"
+        substrate = A = "TiO2"
+        B = "SiO2"
         f = film.FilmSimple(A, B, substrate, d_expected)
         # must set spec before calculating spec
         inc_ang = 60. # incident angle in degree

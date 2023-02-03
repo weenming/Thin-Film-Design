@@ -45,10 +45,10 @@ class FilmSimple(Film):
 
     def __init__(self, A, B, substrate, d_init: np.array, incidence='Air'):
         try:
-            exec(f"self.get_n_A = get_n.get_{A}")
-            exec(f"self.get_n_B = get_n.get_{B}")
-            exec(f"self.get_n_sub = get_n.get_{substrate}")
-            exec(f"self.get_n_inc = get_n.get_{incidence}")
+            exec(f"self.get_n_A = get_n.get_n_{A}")
+            exec(f"self.get_n_B = get_n.get_n_{B}")
+            exec(f"self.get_n_sub = get_n.get_n_{substrate}")
+            exec(f"self.get_n_inc = get_n.get_n_{incidence}")
         except:
             raise ValueError(
                 "Bad material. Dispersion must be specified in gets.get_n")
@@ -138,7 +138,7 @@ class FilmSimple(Film):
         Returns:
             2d np.array, size is wls number * layer number. Refractive indices
         """
-        n_arr = np.zeros(wls.shape[0], self.get_layer_number())
+        n_arr = np.empty((wls.shape[0], self.get_layer_number()), dtype='complex128')
         for i in range(wls.shape[0]):
             wl = wls[i]
             n_A = self.get_n_A(wl)
@@ -156,7 +156,7 @@ class FilmSimple(Film):
         Returns:
             1d np.array, size is wls.shape[0]. Refractive indices
         """
-        n_arr = np.zeros(wls.shape[0])
+        n_arr = np.empty(wls.shape[0], dtype='complex128')
         for i in range(wls.shape[0]):
             n_arr[i] = self.get_n_sub(wls[i])
         return n_arr
@@ -169,7 +169,7 @@ class FilmSimple(Film):
             1d np.array, size is wls.shape[0]. Refractive indices
 
         """
-        n_arr = np.zeros(wls.shape[0])
+        n_arr = np.empty(wls.shape[0], dtype='complex128')
         for i in range(wls.shape[0]):
             n_arr[i] = self.get_n_inc(wls[i])
         return n_arr

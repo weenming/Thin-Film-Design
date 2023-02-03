@@ -47,20 +47,22 @@ def get_spectrum_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
     # copy wls, d, n_layers, n_sub, n_inc, inc_ang to GPU
     wls_device = cuda.to_device(wls)
     d_device = cuda.to_device(d)
-    # n = n_layers[tid, layer_index], but
-    n_A_device = cuda.to_device(n_layers[:, 0]) 
+    # copy 2d arr into 1d as contiguous arr to save data transfer
+    n_A = n_layers[:, 0].copy(order="C") 
+    n_A_device = cuda.to_device(n_A)
     # may have only 1 layer. 
     if layer_number == 1:
         n_B_device = cuda.to_device(np.empty(wls_size))
     else:
-        n_B_device = cuda.to_device(n_layers[:, 1])
+        n_B = n_layers[:, 1].copy(order="C")
+        n_B_device = cuda.to_device(n_B)
      
-    n_B_device = cuda.to_device(n_layers[:, 1])
     n_sub_device = cuda.to_device(n_sub)
     n_inc_device = cuda.to_device(n_inc)
     # primitive transfer is not costly so I leave out inc_ang, wls_size and 
     # layer_number
-    spectrum_device = cuda.device_array(wls_size) # only R spec
+    # R and T spec
+    spectrum_device = cuda.device_array(wls_size * 2, dtype="float64") 
     # invoke kernel
     block_size = 32 # threads per block
     grid_size = (wls_size + block_size - 1) // block_size # blocks per grid
@@ -77,15 +79,32 @@ def get_spectrum_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
         layer_number
     )
     # copy to pre-allocated space
-    return spectrum_device.copy_to_host(spectrum)
+    spectrum_device.copy_to_host(spectrum)
+    return spectrum
 
 
 
 @cuda.jit
-def forward_propagation_simple(spectrum, wls, d, n_A, n_B, n_sub, n_inc, 
-                               inc_ang, wl_size, layer_number):
+def forward_propagation_simple(spectrum, wls, d, n_A_arr, n_B_arr,
+                 n_sub_arr, n_inc_arr, inc_ang, wl_size, layer_number):
     """
-    n = n_layers[tid, layer_index]
+    Parameters:
+        spectrum (cuda.device_array):
+            device array for storing data
+        wls (cuda.device_array):
+            wavelengths
+        d (cuda.device_array):
+        n_A (cuda.device_array):
+            n of material A at different wls
+        n_B (cuda.device_array)
+        n_sub
+        n_inc
+        inc_ang (float):
+            incident angle in rad
+        wl_size:
+            number of wavelengths
+        layer_number:
+            number of layers
     """
     thread_id = cuda.grid(1)
     # check this thread is valid
@@ -95,39 +114,42 @@ def forward_propagation_simple(spectrum, wls, d, n_A, n_B, n_sub, n_inc,
     wl = wls[thread_id]
 
     # inc_ang is already in rad
-    
+    n_A = n_A_arr[thread_id]
+    n_B = n_B_arr[thread_id]
+    n_sub = n_sub_arr[thread_id]
+    n_inc = n_inc_arr[thread_id]
     # incident angle in each layer. Snell's law: n_a sin(phi_a) = n_b sin(phi_b)
     cos_A = cmath.sqrt(1 - ((n_A / n_inc) * cmath.sin(inc_ang)) ** 2)
     cos_B = cmath.sqrt(1 - ((n_B / n_inc) * cmath.sin(inc_ang)) ** 2)
     cos_inc = cmath.cos(inc_ang)
     cos_sub = cmath.sqrt(1 - ((n_sub / n_inc) * cmath.sin(inc_ang)) ** 2)
     
-    # choose cos from arr of size 2
-    cos_arr = cuda.device_array(2, dtype="complex128")
+    # choose cos from arr of size 2. Use local array which is private to thread
+    cos_arr = cuda.local.array(2, dtype="complex128")
     cos_arr[0] = cos_A
     cos_arr[1] = cos_B
 
-    n_arr = cuda.device_array(2, dtype="complex128")
+    n_arr = cuda.local.array(2, dtype="complex128")
     n_arr[0] = n_A
-    n_arr[1] = n_B      
+    n_arr[1] = n_B   
 
     # Allocate space for M 
-    Ms = cuda.device_array((2, 2), dtype="complex128")    
-    Mp = cuda.device_array((2, 2), dtype="complex128")
+    Ms = cuda.local.array((2, 2), dtype="complex128")    
+    Mp = cuda.local.array((2, 2), dtype="complex128")
 
     # Allocate space for W. Fill with first term D_{0}^{-1}
     # TODO: add the influence of n of incident material (when not air)
-    Ws = cuda.device_array((2, 2), dtype="complex128")
+    Ws = cuda.local.array((2, 2), dtype="complex128")
     Ws[0, 0] = 0.5
-    Ws[0, 1] = 0.5 / cmath.cos(inc_ang)
-    Ws[1, 0] = 0.5
-    Ws[1, 1] = -0.5 / cmath.cos(inc_ang)
-    
-    Wp = cuda.device_array((2, 2), dtype="complex128")
-    Wp[0, 0] = 0.5
-    Wp[0, 1] = 0.5 / cos_inc
+    Ws[0, 1] = 0.5 / cos_inc
     Ws[1, 0] = 0.5
     Ws[1, 1] = -0.5 / cos_inc
+    
+    Wp = cuda.local.array((2, 2), dtype="complex128")
+    Wp[0, 0] = 0.5
+    Wp[0, 1] = 0.5 / cos_inc
+    Wp[1, 0] = 0.5
+    Wp[1, 1] = -0.5 / cos_inc
 
     for i in range(layer_number):
         cosi = cos_arr[i % 2]
@@ -147,8 +169,8 @@ def forward_propagation_simple(spectrum, wls, d, n_A, n_B, n_sub, n_inc,
         Mp[1, 0] = cosi / ni * sinhi
         Mp[1, 1] = coshi
 
-        Ws = mul(Ws, Ms)
-        Wp = mul(Wp, Mp)
+        mul(Ws, Ms)
+        mul(Wp, Mp)
 
     # construct the last term D_{n+1} 
     # technically this is merely D which is not M (D^{-2}PD)
@@ -162,19 +184,19 @@ def forward_propagation_simple(spectrum, wls, d, n_A, n_B, n_sub, n_inc,
     Mp[1, 0] = cos_sub
     Mp[1, 1] = cos_sub
 
-    Ws = mul(Ws, Ms)
-    Wp = mul(Wp, Mp)
+    mul(Ws, Ms)
+    mul(Wp, Mp)
 
     # retrieve R and T (calculate the factor before energy flux)
     # Note that spectrum is array on device
     rs = Ws[1, 0] / Ws[0, 0]
     rp = Wp[1, 0] / Wp[0, 0]
     R = (rs * rs.conjugate() + rp * rp.conjugate()) / 2
-    spectrum[thread_id, 0] = R.real
+    spectrum[thread_id] = R.real
 
     # T should be R - 1
     ts = 1 / Ws[0, 0]
     tp = 1 / Wp[0, 0]
     T = cos_sub / cos_inc * n_sub * (
         ts * ts.conjugate() + tp * tp.conjugate()) / 2
-    spectrum[thread_id + wls.shape[0], 0] = T.real
+    spectrum[thread_id + wls.shape[0]] = T.real

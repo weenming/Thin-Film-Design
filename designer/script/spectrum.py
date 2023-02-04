@@ -67,6 +67,9 @@ class SpectrumSimple(Spectrum):
 
     def get_R(self):
         return self.spec_R
+    
+    def get_T(self):
+        return self.spec_T
 
     def is_updated(self):
         return self.updated

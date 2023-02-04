@@ -83,7 +83,6 @@ def get_spectrum_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
     cuda.synchronize()
     # copy to pre-allocated space
     spectrum_device.copy_to_host(spectrum)
-    print(spectrum)
     return spectrum
 
 

@@ -61,7 +61,10 @@ class TestFilm(unittest.TestCase):
         # count relative path from VS Code project root.....
         expected_spec = np.loadtxt("./designer/tests/test_files/expected_spectrum_simple_R_500to1000_30layer_SiO2-TiO2-times-15-SiO2_60inc.csv", dtype="float")
         self.assertAlmostEqual(np.max(np.abs(f.spectrum[0].get_R() - expected_spec)), 0)
+        self.assertAlmostEqual(np.max(np.abs(1 - f.spectrum[0].get_T() - expected_spec)), 0)
+
         plt.plot(f.spectrum[0].get_R())
+        plt.plot()
     
 if __name__ == "__main__":
     unittest.main()

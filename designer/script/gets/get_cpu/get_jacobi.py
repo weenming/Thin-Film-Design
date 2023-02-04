@@ -130,7 +130,7 @@ def get_jacobi(wls, d, materials, n_indices=[], theta0 = 7.):
             coshi = cosh(phi)
             sinhi = sinh(phi)
 
-            # partial_d_r
+            # partial_d R
             jacobi[wl_index, layer_number - i] = (rp.conjugate() *
                                                   (partial_Mp_r[layer_number + 1 - i, 0:, 0:] *
                                                    array([[2 * pi * 1j * ni * cosi * sinhi,
@@ -145,7 +145,7 @@ def get_jacobi(wls, d, materials, n_indices=[], theta0 = 7.):
                                                            2 * pi * 1j * ni * cosi * sinhi]])
                                                    ).sum()
                                                   ).real / wl
-            # partial_d_t
+            # partial_d T
             jacobi[wl_index + wls.shape[0], layer_number - i] = (cosis[layer_number + 1, 0] / cos(theta0) * n[layer_number + 1, 0]).real * \
                                                                 (tp.conjugate() *
                                                                  (partial_Mp_t[layer_number + 1 - i, 0:, 0:] *

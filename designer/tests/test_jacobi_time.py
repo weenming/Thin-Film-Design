@@ -2,15 +2,16 @@ import unittest
 import numpy as np
 import sys
 sys.path.append("./designer/script")
-import timeit
+import os
 import film as film
 import gets.get_n as get_n
-import gets.get_cpu.get_spectrum as get_spectrum_cpu
+import gets.get_jacobi as get_jacobi
+import gets.get_cpu.get_jacobi as get_jacobi_cpu
+import timeit
 
 import matplotlib.pyplot as plt
 
-
-def spec_gpu(layer_number):
+def jacobi_GPU(layer_number):
     np.random.seed(1)
     d_expected = np.random.random(layer_number) * 100
     
@@ -20,17 +21,14 @@ def spec_gpu(layer_number):
     # must set spec before calculating spec
     inc_ang = 60. # incident angle in degree
     wls = np.linspace(500, 1000, 500)
-
-    # calculate
     f.add_spec_param(inc_ang, wls)
-    f.calculate_spectrum()
 
+    jacobi = np.empty((wls.shape[0] * 2, layer_number))
+    get_jacobi.get_jacobi_simple(jacobi, wls, f.get_d(), \
+        f.spectrum[0].n, f.spectrum[0].n_sub, f.spectrum[0].n_inc, inc_ang)
 
-def spec_cpu(layer_number):
-    
-    # layer number must be even
+def jacobi_CPU(layer_number):
     assert layer_number % 2 == 0
-    
     np.random.seed(1)
     d_expected = np.random.random(layer_number) * 100
     
@@ -40,17 +38,18 @@ def spec_cpu(layer_number):
     # must set spec before calculating spec
     inc_ang = 60. # incident angle in degree
     wls = np.linspace(500, 1000, 500)
+    f.add_spec_param(inc_ang, wls)
 
     materials = np.array([A, B] * (layer_number // 2))
-    # calculate
-    get_spectrum_cpu.get_spectrum(wls, d_expected, materials, theta0=inc_ang)
+    get_jacobi_cpu.get_jacobi(wls, f.get_d(), materials, theta0=inc_ang)
+    
 
 def dif_n(layer_number):
     N = 1
-    t_gpu = timeit.timeit(f"spec_gpu({layer_number})", number=N, setup="from __main__ import spec_gpu")
+    t_gpu = timeit.timeit(f"jacobi_GPU({layer_number})", number=N, setup="from __main__ import jacobi_GPU")
     print(f"GPU, spectrum 500 wls: {t_gpu / N}")
     
-    t_cpu = timeit.timeit(f"spec_cpu({layer_number})", number=N, setup="from __main__ import spec_cpu")
+    t_cpu = timeit.timeit(f"jacobi_CPU({layer_number})", number=N, setup="from __main__ import jacobi_CPU")
     print(f"CPU, spectrum 500 wls: {t_cpu / N}")
 
     return t_gpu / N, t_cpu / N
@@ -88,4 +87,4 @@ def plot_time():
     plt.show()
 
 if __name__ == "__main__":
-    unittest.main()
+    plot_time()

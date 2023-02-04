@@ -2,7 +2,7 @@ import numpy as np
 import cmath
 from numba import cuda
 from gets.mat_lib import mul # multiply
-from gets.mat_lib import tps # transpose
+from gets.mat_lib import tsp # transpose
 
 
 
@@ -57,13 +57,14 @@ def get_spectrum_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
     else:
         n_B = n_layers[:, 1].copy(order="C")
         n_B_device = cuda.to_device(n_B)
-     
     n_sub_device = cuda.to_device(n_sub)
     n_inc_device = cuda.to_device(n_inc)
     # primitive transfer is not costly so I leave out inc_ang, wls_size and 
     # layer_number
-    # R and T spec
-    spectrum_device = cuda.device_array(wls_size * 2, dtype="float64") 
+
+    # allocate space for R and T spec
+    spectrum_device = cuda.device_array(wls_size * 2, dtype="float64")
+
     # invoke kernel
     block_size = 16 # threads per block
     grid_size = (wls_size + block_size - 1) // block_size # blocks per grid
@@ -83,13 +84,13 @@ def get_spectrum_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
     cuda.synchronize()
     # copy to pre-allocated space
     spectrum_device.copy_to_host(spectrum)
-    return spectrum
+    
 
 
 
 @cuda.jit
 def forward_propagation_simple(spectrum, wls, d, n_A_arr, n_B_arr,
-                 n_sub_arr, n_inc_arr, inc_ang, wl_size, layer_number):
+                 n_sub_arr, n_inc_arr, inc_ang, wls_size, layer_number):
     """
     Parameters:
         spectrum (cuda.device_array):
@@ -104,14 +105,14 @@ def forward_propagation_simple(spectrum, wls, d, n_A_arr, n_B_arr,
         n_inc
         inc_ang (float):
             incident angle in rad
-        wl_size:
+        wls_size:
             number of wavelengths
         layer_number:
             number of layers
     """
     thread_id = cuda.grid(1)
     # check this thread is valid
-    if thread_id > wl_size:
+    if thread_id > wls_size - 1:
         return
     # each thread calculates one wl    
     wl = wls[thread_id]
@@ -202,4 +203,4 @@ def forward_propagation_simple(spectrum, wls, d, n_A_arr, n_B_arr,
     tp = 1 / Wp[0, 0]
     T = cos_sub / cos_inc * n_sub * (
         ts * ts.conjugate() + tp * tp.conjugate()) / 2
-    spectrum[thread_id + wls.shape[0]] = T.real
+    spectrum[thread_id + wls_size] = T.real

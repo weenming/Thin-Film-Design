@@ -10,7 +10,7 @@ def get_jacobi_simple(jacobi, wls, d, n_layers, n_sub, n_inc, inc_ang):
     """
     This function calculates the Jacobi matrix of a given TFNN. Back 
     propagation is implemented to acquire accurate result.
-    NOTE: at maximum 100 layers supported
+    NOTE: at maximum, MAX_LAYER_NUMBER layers supported
 
     Parameters:
         jacobi (2d np.array):
@@ -140,21 +140,23 @@ def forward_and_backward_propagation(jacobi, wls, d, n_A_arr, n_B_arr,
     # NOTE: this implementation is shit. Need to find a way to make 
     # numba compile MAX_LAYER_NUMBER into constant...
     # Now I am MANUALLY EXPANDING THE CONSTANT INTO EVERY EXPRESSION
-    # NOTE: Support 100 layers for now.
-    MAX_LAYER_NUMBER = 100
+    # NOTE: Support MAX_LAYER_NUMBER layers for now.
+    # also note that allocation of large space drastically affect the 
+    # performance of the algorithm
+    MAX_LAYER_NUMBER = 250
     # bad news: dynamic memory allocation not supported on GPU
-    Ms = cuda.local.array((100 + 2, 2, 2), dtype="complex128") # NOTE: MAX_LAYER_NUMBER
-    Mp = cuda.local.array((100 + 2, 2, 2), dtype="complex128") # NOTE: MAX_LAYER_NUMBER
+    Ms = cuda.local.array((250 + 2, 2, 2), dtype="complex128") # NOTE: MAX_LAYER_NUMBER
+    Mp = cuda.local.array((250 + 2, 2, 2), dtype="complex128") # NOTE: MAX_LAYER_NUMBER
 
     # Allocate space for W. Fill with first term D_{0}^{-1}
     # TODO: add the influence of n of incident material (when not air)
-    Ws = cuda.local.array((100 + 2, 2, 2), dtype="complex128") # NOTE: MAX_LAYER_NUMBER
+    Ws = cuda.local.array((250 + 2, 2, 2), dtype="complex128") # NOTE: MAX_LAYER_NUMBER
     Ws[0, 0, 0] = 0.5
     Ws[0, 0, 1] = 0.5 / cos_inc
     Ws[0, 1, 0] = 0.5
     Ws[0, 1, 1] = -0.5 / cos_inc
     
-    Wp = cuda.local.array((100 + 2, 2, 2), dtype="complex128") # NOTE: MAX_LAYER_NUMBER
+    Wp = cuda.local.array((250 + 2, 2, 2), dtype="complex128") # NOTE: MAX_LAYER_NUMBER
     Wp[0, 0, 0] = 0.5
     Wp[0, 0, 1] = 0.5 / cos_inc
     Wp[0, 1, 0] = 0.5
@@ -212,15 +214,15 @@ def forward_and_backward_propagation(jacobi, wls, d, n_A_arr, n_B_arr,
     '''
     BACKWARD PROPAGATION
     '''
-    # NOTE: integer 100 here should be constant MAX_LAYER_NUMBER
-    partial_Ws_r = cuda.local.array((100 + 2, 2, 2), dtype="complex128")
-    partial_Ws_t = cuda.local.array((100 + 2, 2, 2), dtype="complex128")
-    partial_Wp_r = cuda.local.array((100 + 2, 2, 2), dtype="complex128")
-    partial_Wp_t = cuda.local.array((100 + 2, 2, 2), dtype="complex128")
-    partial_Ms_r = cuda.local.array((100 + 2, 2, 2), dtype="complex128")
-    partial_Ms_t = cuda.local.array((100 + 2, 2, 2), dtype="complex128")
-    partial_Mp_r = cuda.local.array((100 + 2, 2, 2), dtype="complex128")
-    partial_Mp_t = cuda.local.array((100 + 2, 2, 2), dtype="complex128")
+    # NOTE: integer 250 here should be constant MAX_LAYER_NUMBER
+    partial_Ws_r = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
+    partial_Ws_t = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
+    partial_Wp_r = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
+    partial_Wp_t = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
+    partial_Ms_r = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
+    partial_Ms_t = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
+    partial_Mp_r = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
+    partial_Mp_t = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
     
     # \partial_{W_{n + 1}} r or t (derivative from the last layer)
     partial_Ws_r[layer_number + 1, 0, 0] = -Ws[layer_number + 1, 1, 0] / Ws[layer_number + 1, 0, 0] ** 2

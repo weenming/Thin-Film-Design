@@ -54,13 +54,20 @@ def dif_n(layer_number):
 
     return t_gpu / N, t_cpu / N
 
+def dif_n_GPU(layer_number):
+    N = 1
+    t_gpu = timeit.timeit(f"jacobi_GPU({layer_number})", number=N, setup="from __main__ import jacobi_GPU")
+    print(f"GPU, spectrum 500 wls: {t_gpu / N}")
+    
+    return t_gpu / N
+
 def plot_time():
     # compile first
     dif_n(10)
 
     # start testing at different layer numbers
-    Ns = np.array(range(10, 100, 20))
-    print(Ns)
+    # NOTE: max layer number is set in gets.get_jacobi
+    Ns = np.array(range(10, 200, 20))
     Ts_GPU = []
     Ts_CPU = []
     for i in Ns:
@@ -70,7 +77,7 @@ def plot_time():
     
     k_cpu, b_cpu = np.polyfit(Ns, Ts_CPU, 1)
     k_gpu, b_gpu = np.polyfit(Ns, Ts_GPU, 1)
-    N_e = np.linspace(0, Ns[-1], 100)
+    N_e = np.linspace(0, Ns[-1], 1000)
 
     fig, ax = plt.subplots(1, 1)
     ax.scatter(Ns, Ts_CPU, label='CPU', marker='x')
@@ -82,9 +89,38 @@ def plot_time():
     ax.legend()
     ax.set_xlabel("layer number")
     ax.set_ylabel("time / s")
-    ax.set_yscale('log')
+    # ax.set_yscale('log')
     ax.set_xlim(0, Ns[-1])
     plt.show()
 
+
+def plot_time_GPU():
+    # compile first
+    dif_n(10)
+
+    # start testing at different layer numbers
+    # NOTE: max layer number is set in gets.get_jacobi
+    Ns = np.array(range(10, 100, 1))
+    print(Ns)
+    Ts_GPU = []
+    for i in Ns:
+        g= dif_n_GPU(i)
+        Ts_GPU.append(g)
+    
+    k_gpu, b_gpu = np.polyfit(Ns, Ts_GPU, 1)
+    N_e = np.linspace(0, Ns[-1], 1000)
+
+    fig, ax = plt.subplots(1, 1)
+    ax.scatter(Ns, Ts_GPU, label='GPU', marker='x')
+    ax.plot(N_e, k_gpu * N_e + b_gpu, label='GPU fit')
+    ax.legend()
+    ax.set_xlabel("layer number")
+    ax.set_ylabel("time / s")
+    # ax.set_yscale('log')
+    ax.set_xlim(0, Ns[-1])
+    ax.set_ylim(0, k_gpu * N_e[-1] + b_gpu)
+
+    plt.show()
+
 if __name__ == "__main__":
-    plot_time()
+    plot_time_GPU()

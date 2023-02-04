@@ -41,13 +41,13 @@ class SpectrumSimple(Spectrum):
         self.n = film.calculate_n_array(self.WLS)
         self.n_sub = film.calculate_n_sub(self.WLS)
         self.n_inc = film.calculate_n_inc(self.WLS)
-        self.spec = np.empty(self.WLS.shape[0])
+        self.spec = np.empty(self.WLS.shape[0] * 2)
         self.film = film
         self.updated = False
 
     def set_n(self):
         # [R, T]
-        self.n = self.calculate_n_array(self.WLS * 2) 
+        self.n = self.calculate_n_array(self.WLS) 
 
     def calculate(self):
         # only R spectrum

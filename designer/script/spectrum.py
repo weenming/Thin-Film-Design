@@ -41,12 +41,13 @@ class SpectrumSimple(Spectrum):
         self.n = film.calculate_n_array(self.WLS)
         self.n_sub = film.calculate_n_sub(self.WLS)
         self.n_inc = film.calculate_n_inc(self.WLS)
-        self.spec = np.empty(self.WLS.shape[0])
+        self.spec = np.empty(self.WLS.shape[0] * 2)
         self.film = film
         self.updated = False
 
     def set_n(self):
-        self.n = self.calculate_n_array(self.WLS)
+        # [R, T]
+        self.n = self.calculate_n_array(self.WLS) 
 
     def calculate(self):
         # only R spectrum
@@ -57,8 +58,8 @@ class SpectrumSimple(Spectrum):
                                                 self.n_inc,
                                                 self.INC_ANG
                                                 )
-        self.spec_R = self.spec[0, :]
-        self.spec_T = self.spec[1, :]
+        self.spec_R = self.spec[:self.WLS.shape[0]]
+        self.spec_T = self.spec[self.WLS.shape[0]:]
         self.updated = True
 
     def outdate(self):
@@ -66,6 +67,9 @@ class SpectrumSimple(Spectrum):
 
     def get_R(self):
         return self.spec_R
+    
+    def get_T(self):
+        return self.spec_T
 
     def is_updated(self):
         return self.updated

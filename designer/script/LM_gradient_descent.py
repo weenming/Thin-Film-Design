@@ -123,7 +123,7 @@ def stack_f(f_old, wls_num, layer_num, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_l
             n_sub_ls[-1], 
             n_inc_ls[-1], 
             inc_ang[-1]
-        )[:wls.shape[0], :]
+        )[:wls.shape[0], :] # get only half of the spectrum
         i += this_wls_num
     
     f_old = f_old - target_spec

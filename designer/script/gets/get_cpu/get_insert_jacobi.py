@@ -1,8 +1,5 @@
-import sys
-sys.path.append('C:/Users/weenming/OneDrive/Ellipsometry/Needle optimization using TFNN/python_code')
-
 from numpy import *
-from gets.get_n import get_n
+from gets.get_cpu.get_n import get_n
 
 
 def inserted_layers(d, materials, insert_layer_num, insert_position, insert_thickness=0.00001):

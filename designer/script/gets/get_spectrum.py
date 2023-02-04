@@ -65,7 +65,7 @@ def get_spectrum_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
     # R and T spec
     spectrum_device = cuda.device_array(wls_size * 2, dtype="float64") 
     # invoke kernel
-    block_size = 32 # threads per block
+    block_size = 16 # threads per block
     grid_size = (wls_size + block_size - 1) // block_size # blocks per grid
     
     forward_propagation_simple[grid_size, block_size](

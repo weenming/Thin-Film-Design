@@ -46,7 +46,8 @@ class SpectrumSimple(Spectrum):
         self.updated = False
 
     def set_n(self):
-        self.n = self.calculate_n_array(self.WLS)
+        # [R, T]
+        self.n = self.calculate_n_array(self.WLS * 2) 
 
     def calculate(self):
         # only R spectrum
@@ -57,8 +58,8 @@ class SpectrumSimple(Spectrum):
                                                 self.n_inc,
                                                 self.INC_ANG
                                                 )
-        self.spec_R = self.spec[0, :]
-        self.spec_T = self.spec[1, :]
+        self.spec_R = self.spec[:self.WLS.shape[0]]
+        self.spec_T = self.spec[self.WLS.shape[0]:]
         self.updated = True
 
     def outdate(self):

@@ -13,14 +13,16 @@ def get_spectrum_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
 
     Arguments:
         spectrum (1d np.array):
+            2 * wls.shape[0], type: float64
             pre-allocated memory space for returning spectrum 
         wls (1d np.array): 
+            wls.shape[0]
             wavelengths of the target spectrum
         d (1d np.array):
             multi-layer thicknesses after last iteration
         n_layers (2d np.array): 
-            size: wls.shape[0] \cross d.shape[0]. refractive indices of 
-            each *layer*
+            wls.shape[0] \cross d.shape[0]. 
+            refractive indices of each *layer*
         n_sub (1d np.array):
             refractive indices of the substrate
         n_inc (1d np.array):
@@ -38,7 +40,6 @@ def get_spectrum_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
     inc_ang_rad = inc_ang / 180 * np.pi
     # traverse all wl, save R and T to the 2N*1 np.array spectrum. [R, T]
     wls_size = wls.shape[0]
-    spectrum = np.empty(wls_size)
 
     # TODO: move the copy of wls, n arr to outer loop 
     # (caller of spec, for example LM optimizer) 
@@ -66,6 +67,7 @@ def get_spectrum_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
     # invoke kernel
     block_size = 32 # threads per block
     grid_size = (wls_size + block_size - 1) // block_size # blocks per grid
+    
     forward_propagation_simple[grid_size, block_size](
         spectrum_device,
         wls_device,
@@ -78,8 +80,10 @@ def get_spectrum_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
         wls_size,
         layer_number
     )
+    cuda.synchronize()
     # copy to pre-allocated space
     spectrum_device.copy_to_host(spectrum)
+    print(spectrum)
     return spectrum
 
 
@@ -119,10 +123,10 @@ def forward_propagation_simple(spectrum, wls, d, n_A_arr, n_B_arr,
     n_sub = n_sub_arr[thread_id]
     n_inc = n_inc_arr[thread_id]
     # incident angle in each layer. Snell's law: n_a sin(phi_a) = n_b sin(phi_b)
-    cos_A = cmath.sqrt(1 - ((n_A / n_inc) * cmath.sin(inc_ang)) ** 2)
-    cos_B = cmath.sqrt(1 - ((n_B / n_inc) * cmath.sin(inc_ang)) ** 2)
+    cos_A = cmath.sqrt(1 - ((n_inc / n_A) * cmath.sin(inc_ang)) ** 2)
+    cos_B = cmath.sqrt(1 - ((n_inc / n_B) * cmath.sin(inc_ang)) ** 2)
     cos_inc = cmath.cos(inc_ang)
-    cos_sub = cmath.sqrt(1 - ((n_sub / n_inc) * cmath.sin(inc_ang)) ** 2)
+    cos_sub = cmath.sqrt(1 - ((n_inc / n_sub) * cmath.sin(inc_ang)) ** 2)
     
     # choose cos from arr of size 2. Use local array which is private to thread
     cos_arr = cuda.local.array(2, dtype="complex128")

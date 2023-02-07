@@ -1,8 +1,7 @@
 import numpy as np
 import cmath
 from numba import cuda
-from gets.mat_lib import mul # multiply
-from gets.mat_lib import tsp # transpose
+from gets.mat_lib import mul, tsp # 2 * 2 matrix optr
 
 
 

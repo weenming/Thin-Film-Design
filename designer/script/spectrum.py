@@ -66,10 +66,19 @@ class SpectrumSimple(Spectrum):
         self.updated = False
 
     def get_R(self):
-        return self.spec_R
+        try:
+            return self.spec_R
+        except AttributeError:
+            raise ValueError('spec R not yet calculated')
+
     
     def get_T(self):
-        return self.spec_T
+        try:
+            return self.spec_T
+        except AttributeError:
+            raise ValueError('spec R not yet calculated')
+
+        
 
     def is_updated(self):
         return self.updated

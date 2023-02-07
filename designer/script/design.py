@@ -1,5 +1,5 @@
 import numpy as np
-import needle_insert as insert
+import optimizer.needle_insert as insert
 import optimizer.LM_gradient_descent as gd
 import film
 

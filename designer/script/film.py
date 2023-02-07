@@ -62,7 +62,7 @@ class FilmSimple(Film):
 
         """
         for s in self.spectrum:
-            if s.WLS == wls and s.INC_ANG == inc_ang:
+            if s.WLS.all() == wls.all() and s.INC_ANG == inc_ang:
                 return
         spec = spectrum.SpectrumSimple(inc_ang, wls, self)
         self.spectrum.append(spec)
@@ -77,12 +77,12 @@ class FilmSimple(Film):
                 count += 1
         return count
 
-    def get_spec(self, inc_ang=None, wls=None):
+    def get_spec(self, inc_ang=None, wls=None)->spectrum.SpectrumSimple:
         """ return spectrum with specified wls and inc_ang
         """
         if len(self.spectrum) == 1:
             # when only one spectrum, return the only one spectrum
-            return s
+            return self.spectrum[0]
         elif len(self.spectrum) == 0:
             raise ValueError("Uninitialized spectrum!")
         else:
@@ -208,23 +208,3 @@ class FilmSimple(Film):
 
 
 
-def calculate_merit(film1, film2):
-    spec_1_arr = np.array([])
-    spec_2_arr = np.array([])
-    
-    for spec in film1.get_all_spec_list():
-        # only R spec is counted
-        spec_1_arr = np.append(spec_1_arr, spec.get_R())
-        # target spectrum params
-        inc_ang, wls = spec.INC_ANG, spec.WLS
-        this_spec_2 = film2.get_spec(inc_ang, wls)
-        # if spec updated, no need to calculate again
-        if not this_spec_2.is_updated():
-            this_spec_2.calculate()
-        # only R spec is counted
-        this_spec_2_arr = this_spec_2.get_R()
-        spec_2_arr = np.append(spec_2_arr, this_spec_2_arr)
-    # merit: RMS
-    merit = np.sqrt(np.square(spec_1_arr - spec_2_arr)
-                / spec_1_arr.shape[0])
-    return merit

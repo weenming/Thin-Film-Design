@@ -10,6 +10,17 @@ The aim of this project is
   - lower total optical thickness
   - lower layer numbers
   - fewer "super thin" layers which is impractical in realistic manufacture.
+
+
+## Dependents
+Run on a machine supporting CUDA
+- numpy
+- numba
+- cudatoolkit
+- matplotlib
+
+
+
 ## File structure
 
 - `script`

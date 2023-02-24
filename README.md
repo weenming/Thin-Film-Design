@@ -18,7 +18,7 @@ Run on a machine supporting CUDA
 - numba
 - cudatoolkit
 - matplotlib
-
+Use `conda install -c conda-forge numpy numba matplotlib cudatoolkit`
 
 
 ## File structure

@@ -2,7 +2,6 @@ import numpy as np
 from gets.get_jacobi import get_jacobi_simple
 from gets.get_spectrum import get_spectrum_simple
 import time
-from film import calculate_merit
 from film import FilmSimple
 
 def LM_optimize_d_simple(film: FilmSimple, target_film: FilmSimple, h_tol, max_step):

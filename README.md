@@ -18,8 +18,10 @@ Run on a machine supporting CUDA
 - numba
 - cudatoolkit
 - matplotlib
-Use `conda install -c conda-forge numpy numba matplotlib cudatoolkit`
 
+Use `conda install -c conda-forge numpy numba matplotlib cudatoolkit=*the cuda version of the driver*`
+Note that the version of cudatoolkit should match that of the version of the driver
+  > It works out of the box for CUDA C/C++ as far as I am aware - however, because Numba doesn't know anything about forward compatibility it always tries to generate PTX for the latest version supported by the toolkit and not the driver, so the driver refuses to accept it for linking [Thread](https://github.com/numba/numba/issues/7006)
 
 ## File structure
 

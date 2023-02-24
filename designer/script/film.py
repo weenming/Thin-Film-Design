@@ -52,7 +52,12 @@ class FilmSimple(Film):
         except:
             raise ValueError(
                 "Bad material. Dispersion must be specified in gets.get_n")
+        
+    
+        assert len(d_init.shape) == 1, "Should be 1 dim array!"
+        assert d_init.shape[0] < 250, "Not supported layer number!"
         self.d = d_init
+        
         self.spectrum = []
 
     # Getter and Setter, etc of attribute spectrum
@@ -198,8 +203,8 @@ class FilmSimple(Film):
             wl (float):
                 wavelength at which refractive index is evaluated
         """
-        n_A = self.n_A(wl)
-        n_B = self.n_B(wl)
+        n_A = self.get_n_A(wl)
+        n_B = self.get_n_B(wl)
         d_even = np.array([self.get_d()[i]
                            for i in range(0, self.get_layer_number(), 2)])
         d_odd = np.array([self.get_d()[i]

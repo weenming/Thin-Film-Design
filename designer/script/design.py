@@ -2,6 +2,7 @@ import numpy as np
 import optimizer.needle_insert as insert
 import optimizer.LM_gradient_descent as gd
 import film
+import utils.loss
 
 
 class DesignSimple:
@@ -17,16 +18,17 @@ class DesignSimple:
             raise ValueError("target_film must have nonempty spectrum")
         self.target_film.calculate_spectrum()
         self.film = init_film
+        self.loss = None # Diff of the spec of designed film and target spec in RMS
 
     def get_ot_ratio(self):
         return self.film.get_optical_thickness() / \
              self.target_film.get_optical_thickness()
     
-    def calculate_merit(self):
+    def calculate_loss(self):
         """
-        Calculate the merit wrt the target spectrum specified in self.target_film
+        Calculate the RMS wrt the target spectrum specified in self.target_film
         """
-        film.calculate_merit(self.target_film, self.film)
+        self.loss = utils.loss.calculate_RMS(self.target_film, self.film)
 
 
     def flexible_TFNN(self, epoch, record=False):

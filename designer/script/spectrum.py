@@ -47,7 +47,7 @@ class SpectrumSimple(Spectrum):
 
     def set_n(self):
         # [R, T]
-        self.n = self.calculate_n_array(self.WLS) 
+        self.n = self.film.calculate_n_array(self.WLS) 
 
     def calculate(self):
         # only R spectrum

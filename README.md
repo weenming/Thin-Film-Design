@@ -12,7 +12,7 @@ The aim of this project is
   - fewer "super thin" layers which is impractical in realistic manufacture.
 
 
-## Dependents
+## Dependencies
 Run on a machine supporting CUDA
 - numpy
 - numba

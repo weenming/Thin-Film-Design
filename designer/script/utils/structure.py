@@ -13,29 +13,30 @@ def diff_simple_film(film1: FilmSimple, film2: FilmSimple):
     '''
     wl = 750.  # wl at which refractive index is evaluated
 
-    n1A, n1B = film1.get_n_A(), film1.get_n_B()
-    n2A, n2B = film2.get_n_A(), film2.get_n_B()
+    n1A, n1B = film1.get_n_A(wl), film1.get_n_B(wl)
+    n2A, n2B = film2.get_n_A(wl), film2.get_n_B(wl)
+    n1_sub, n2_sub = film1.get_n_sub(wl), film2.get_n_sub(wl)
     d1, d2 = film1.get_d(), film2.get_d()  # array of thicknesses in nm
 
     if np.sum(d1) > np.sum(d2):
         l1_diff = _calculate_structure_difference_simple_film(
             d1, n1A, n1B,
             d2, n2A, n2B,
-            film2.get_n_sub
+            n2_sub
         )
     else:
         l1_diff = _calculate_structure_difference_simple_film(
             d2, n2A, n2B,
             d1, n1A, n1B,
-            film1.get_n_sub
+            n1_sub
         )
 
     # norm(?) by the largest possible film
     l1_diff /= _calculate_structure_difference_simple_film(
-        np.array([1]), np.max(n1A, n2A, n1B, n2B), None,
-        np.array([1]), np.min(n1A, n2A, n1B, n2B), None,
+        np.array([1]), np.max([n1A, n2A, n1B, n2B]), None,
+        np.array([1]), np.min([n1A, n2A, n1B, n2B]), None,
         None
-    ) * np.max(np.sum(d1), np.sum(d2))
+    ) * np.max([np.sum(d1), np.sum(d2)])
 
     return l1_diff
 
@@ -57,7 +58,7 @@ def _calculate_structure_difference_simple_film(d1, n1A, n1B, d2, n2A, n2B, n_su
     i1, i2, depth1, depth2 = 0, 0, d1[0], d2[0]
     depth = 0.
 
-    while depth < np.sum(d1):
+    while depth < np.sum(d1) - 1e-5:
         n1 = [n1A, n1B][i1 % 2]
         n2 = [n2A, n2B][i2 % 2] if i2 < d2.shape[0] else n_sub
 

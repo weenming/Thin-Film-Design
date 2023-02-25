@@ -35,8 +35,8 @@ class SpectrumSimple(Spectrum):
         this spectrum is updated in regard to the current film structure.
     """
 
-    def __init__(self, incident_angles, wavelengths, film):
-        self.INC_ANG = incident_angles
+    def __init__(self, incident_angle, wavelengths, film):
+        self.INC_ANG = incident_angle
         self.WLS = wavelengths
         self.n = film.calculate_n_array(self.WLS)
         self.n_sub = film.calculate_n_sub(self.WLS)

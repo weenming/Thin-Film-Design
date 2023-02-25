@@ -71,6 +71,7 @@ class FilmSimple(Film):
                 return
         spec = spectrum.SpectrumSimple(inc_ang, wls, self)
         self.spectrum.append(spec)
+        return spec
 
     def remove_spec_param(self, inc_ang=None, wls=None):
         assert wls != None or inc_ang != None, "Must specify which spec to del"
@@ -91,14 +92,17 @@ class FilmSimple(Film):
         elif len(self.spectrum) == 0:
             raise ValueError("Uninitialized spectrum!")
         else:
-            if inc_ang == None or wls == None:
+            if inc_ang is None or wls is None:
                 raise ValueError(
                     "In the case of multiple spectrums, must specify inc_ang\
                     and wls")
             for s in self.spectrum:
-                if s.WLS == wls and s.INC_ANG == inc_ang:
+                if all(s.WLS == wls) and s.INC_ANG == inc_ang:
                     return s
-        # Not found, add to get_spec
+            # Not found, add to get_spec
+            print("WARNING: spec not in this film's spec list. add to film!")
+            return self.add_spec_param(inc_ang, wls)
+
 
     def get_all_spec_list(self):
         return self.spectrum

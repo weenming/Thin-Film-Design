@@ -10,6 +10,8 @@ def get_spectrum_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
     This function calculates the reflectance and transmittance spectrum of a 
     non-polarized light (50% p-polarized and 50% s-polarized).
 
+    It launches a CUDA kernel function after copying essential data to the GPU.
+
     Arguments:
         spectrum (1d np.array):
             2 * wls.shape[0], type: float64

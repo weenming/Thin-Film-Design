@@ -4,51 +4,8 @@ from film import FilmSimple
 import cmath
 from gets.mat_lib import mul, tsp # 2 * 2 matrix optr
 
-def get_W_everywhere(film: FilmSimple):
-    '''
-    This function calculates the electric field distibution (at interfaces
-    given by transfer matrices) of a non-polarized light (50% p-polarized 
-    and 50% s-polarized).
-    '''
 
-    for spec in film.get_all_spec_list(): # stack specs
-        pass
-    return
-
-def get_W_before_ith_layer(wls, d, n_layers, n_sub, n_inc, inc_ang, i):
-    '''
-    This function gets W_i which is defined as in gets.get_spectrum, the product
-    of transfer matrices of layers before i.
-    $W_i^{before} \def D_{inc}^{-1} \prod_{j=0}^{i-1} D_j P_j D_j^{-1}$
-    NOTE: i is the same as the index of the d array
-
-    Implementation: to save time of copying a large array from GPU to memory, 
-    we choose to perform 2 forward propagations for each layer to substitute.
-    I am not sure if this implementation would be faster...Better than search for 
-    sure, though.
-
-    returns: (2 * sum of len(wls) of every spec) \cross 2 \corss 2
-        (W_i for every wl, s-polarized and p-polarized) 
-    '''
-    W_spec = np.empty((wls.shape[0] * 2, 2, 2), dtype='complex128')
-    _launch_propagation(W_spec, wls, d, n_layers, n_sub, n_inc, inc_ang, -1, i-1)
-    return W_spec
-
-def get_W_after_ith_layer(wls, d, n_layers, n_sub, n_inc, inc_ang, i):
-    '''
-    This function gets W_i which is defined *DIFFERENT* from gets.get_spectrum, 
-    the product of transfer matrices of layers before i.
-    $W_i^{after} \def (\prod_{j=i+1}^{n-1} D_j P_j D_j^{-1}) D_{sub}$
-    NOTE: i is the same as the index of the d array
-
-    Implementation: same as above
-    '''
-    W_spec = np.empty((wls.shape[0] * 2, 2, 2), dtype='complex128')
-    _launch_propagation(W_spec, wls, d, n_layers, n_sub, n_inc, inc_ang, i+1, d.shape[0])
-    return W_spec
-
-def _launch_propagation(W_spec, wls, d, n_layers, n_sub, n_inc, inc_ang, 
-                        i_start, i_end):
+def get_E(wls, d, n_layers, n_sub, n_inc, inc_ang):
     """
 
     Parameters:
@@ -58,6 +15,7 @@ def _launch_propagation(W_spec, wls, d, n_layers, n_sub, n_inc, inc_ang,
     Returns:
         2 \corss 2 \cross sum of len(wls) for this specturm  (W_i for every wl)
     """
+    E_spec = np.empty((wls.shape[0] * 2, 2), dtype="complex128")
     # layer number of thin film, substrate not included
     layer_number = d.shape[0]
     # convert incident angle in degree to rad
@@ -86,15 +44,15 @@ def _launch_propagation(W_spec, wls, d, n_layers, n_sub, n_inc, inc_ang,
     # primitive transfer is not costly so I leave out inc_ang, wls_size and 
     # layer_number
 
-    # allocate space for R and T spec
-    Ws_device = cuda.device_array((wls_size * 2, 2, 2), dtype="complex128")
+    # allocate space for E spec on GPU
+    E_spec_device = cuda.device_array((wls_size * 2, 2), dtype="complex128")
 
     # invoke kernel
     block_size = 16 # threads per block
     grid_size = (wls_size + block_size - 1) // block_size # blocks per grid
     
-    forward_propagation_simple_W_i[grid_size, block_size](
-        Ws_device,
+    forward_propagation_simple_E[grid_size, block_size](
+        E_spec_device,
         wls_device,
         d_device, 
         n_A_device,
@@ -103,22 +61,21 @@ def _launch_propagation(W_spec, wls, d, n_layers, n_sub, n_inc, inc_ang,
         n_inc_device,
         inc_ang_rad,
         wls_size,
-        layer_number,
-        i_start,
-        i_end
+        layer_number
     )
     cuda.synchronize()
     # copy to pre-allocated space
-    Ws_device.copy_to_host(W_spec)
+    E_spec_device.copy_to_host(E_spec)
+    return E_spec
 
 
+    
 @cuda.jit
-def forward_propagation_simple_W_i(W_spec, wls, d, n_A_arr, n_B_arr,
-                 n_sub_arr, n_inc_arr, inc_ang, wls_size, layer_number, 
-                 i_start, i_end):
+def forward_propagation_simple_E(E_spec, wls, d, n_A_arr, n_B_arr,
+                 n_sub_arr, n_inc_arr, inc_ang, wls_size, layer_number):
     """
     Parameters:
-        W_spec (cuda.device_array):
+        E_spec (cuda.device_array):
             device array for storing data
         wls (cuda.device_array):
             wavelengths
@@ -135,10 +92,6 @@ def forward_propagation_simple_W_i(W_spec, wls, d, n_A_arr, n_B_arr,
         layer_number:
             number of layers
 
-        i_start:
-            must greater or equal to -1
-        i_end:
-            must smaller or equal to n
     """
     thread_id = cuda.grid(1)
     # check this thread is valid
@@ -177,39 +130,19 @@ def forward_propagation_simple_W_i(W_spec, wls, d, n_A_arr, n_B_arr,
     
     # Initialize W according to i_start
     # TODO: add the influence of n of incident material (when not air)  
-    if i_start < 0:
-        Ws[0, 0] = 0.5
-        Ws[0, 1] = 0.5 / cos_inc
-        Ws[1, 0] = 0.5
-        Ws[1, 1] = -0.5 / cos_inc
-    
-        Wp[0, 0] = 0.5
-        Wp[0, 1] = 0.5 / cos_inc
-        Wp[1, 0] = 0.5
-        Wp[1, 1] = -0.5 / cos_inc
-    else:
-        cosi = cos_arr[0]
-        ni = n_arr[0]
-        phi = 2 * cmath.pi * 1j * cosi * ni * d[0] / wl
 
-        coshi = cmath.cosh(phi)
-        sinhi = cmath.sinh(phi)
+    Ws[0, 0] = 0.5
+    Ws[0, 1] = 0.5 / cos_inc
+    Ws[1, 0] = 0.5
+    Ws[1, 1] = -0.5 / cos_inc
 
-        Ws[0, 0] = coshi
-        Ws[0, 1] = sinhi / cosi / ni
-        Ws[1, 0] = cosi * ni * sinhi
-        Ws[1, 1] = coshi
-
-        Wp[0, 0] = coshi
-        Wp[0, 1] = sinhi * ni / cosi
-        Wp[1, 0] = cosi / ni * sinhi
-        Wp[1, 1] = coshi
-    
-    i_start += 1 # if inc, i should start with 0 later; if not, 
-    # i should start with 1 (first M is already calculated)
+    Wp[0, 0] = 0.5
+    Wp[0, 1] = 0.5 / cos_inc
+    Wp[1, 0] = 0.5
+    Wp[1, 1] = -0.5 / cos_inc
 
     # forward propagation
-    for i in range(i_start, min(i_end+1, layer_number)):
+    for i in range(layer_number):
         cosi = cos_arr[i % 2]
         ni = n_arr[i % 2]
         phi = 2 * cmath.pi * 1j * cosi * ni * d[i] / wl
@@ -233,24 +166,19 @@ def forward_propagation_simple_W_i(W_spec, wls, d, n_A_arr, n_B_arr,
     # construct the last term D_{n+1} 
     # technically this is merely D which is not M (D^{-2}PD)
 
-    if i_end > layer_number:
-        Ms[0, 0] = 1.
-        Ms[0, 1] = 1.
-        Ms[1, 0] = n_sub * cos_sub
-        Ms[1, 1] = n_sub * cos_sub
+    Ms[0, 0] = 1.
+    Ms[0, 1] = 1.
+    Ms[1, 0] = n_sub * cos_sub
+    Ms[1, 1] = n_sub * cos_sub
 
-        Mp[0, 0] = n_sub
-        Mp[0, 1] = n_sub
-        Mp[1, 0] = cos_sub
-        Mp[1, 1] = cos_sub
+    Mp[0, 0] = n_sub
+    Mp[0, 1] = n_sub
+    Mp[1, 0] = cos_sub
+    Mp[1, 1] = cos_sub
 
-        mul(Ws, Ms)
-        mul(Wp, Mp)
+    mul(Ws, Ms)
+    mul(Wp, Mp)
 
-    # should not use slice
     for i in [0, 1]:
-        for j in [0, 1]:
-            W_spec[thread_id, i, j] = Ws[i, j] # s-polarized
-            W_spec[thread_id + wls_size, i, j] = Wp[i, j] # p-polarized
-
-
+        E_spec[thread_id, i] = Ws[i, 0] # s-polarized
+        E_spec[thread_id + wls_size, i] = Wp[i, 0] # p-polarized

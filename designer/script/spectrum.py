@@ -45,7 +45,7 @@ class SpectrumSimple(Spectrum):
         self.film = film
         self.updated = False
 
-    def set_n(self):
+    def update_n(self):
         # [R, T]
         self.n = self.film.calculate_n_array(self.WLS) 
 

@@ -191,7 +191,8 @@ class FilmSimple(Film):
     def update_d(self, d):
         self.d = d
         for spec in self.get_all_spec_list():
-            spec.outdate()
+            spec.update_n() # calculate the n array again
+            spec.outdate() # set the oudated flag of the stored spectrum(s)
         return self.check_thickness()
 
     def get_layer_number(self):

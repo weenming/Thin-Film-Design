@@ -43,7 +43,7 @@ class FilmSimple(Film):
 
     """
 
-    def __init__(self, A, B, substrate, d_init: np.array, incidence='Air'):
+    def __init__(self, A:str, B:str, substrate:str, d_init: np.array, incidence='Air'):
         try:
             exec(f"self.get_n_A = get_n.get_n_{A}")
             exec(f"self.get_n_B = get_n.get_n_{B}")

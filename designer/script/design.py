@@ -13,7 +13,8 @@ class DesignSimple:
     def __init__(self,
                  target_film: film.FilmSimple,
                  film: film.FilmSimple,
-                 init_ot=None
+                 init_ot=None,
+                 init_gt=None
                  ):
         self.target_film = target_film
         if len(self.target_film.spectrum) == 0:
@@ -22,6 +23,7 @@ class DesignSimple:
         self.film = film
         self.loss = None  # Diff of the spec of designed film and target spec in RMS
         self.init_ot = init_ot
+        self.init_gt = init_gt
 
     def get_ot_ratio(self):
         return self.film.get_optical_thickness() / \

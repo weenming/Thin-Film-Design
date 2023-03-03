@@ -2,7 +2,7 @@ import numpy as np
 from film import FilmSimple
 
 #TODO: optimize metric: calculate structure in smaller or larger thickness?
-def diff_simple_film(film1: FilmSimple, film2: FilmSimple, metric='abs'):
+def diff_simple_film(film1: FilmSimple, film2: FilmSimple, metric='abs', norm=None, wl=750.):
     '''
     Calculate a metric characterizing the difference between two films:
     $\int \|n_1(x) - n_2 (x)\|_1dx$
@@ -10,8 +10,10 @@ def diff_simple_film(film1: FilmSimple, film2: FilmSimple, metric='abs'):
     Parameters:
         film1: FilmSimple instance
         film2: FilmSimple instance
+        norm: the thickness by which the difference metric is normed.
+            note that films with different total ot should be punished, but 2 thick films should not
+        wl: wl at which refractive index is evaluated
     '''
-    wl = 750.  # wl at which refractive index is evaluated
 
     n1A, n1B = film1.get_n_A(wl), film1.get_n_B(wl)
     n2A, n2B = film2.get_n_A(wl), film2.get_n_B(wl)
@@ -39,11 +41,10 @@ def diff_simple_film(film1: FilmSimple, film2: FilmSimple, metric='abs'):
         )
 
     # norm(?) by the largest possible film
-    l1_diff /= calculate_diff(
-        np.array([1]), np.max([n1A, n2A, n1B, n2B]), None,
-        np.array([1]), np.min([n1A, n2A, n1B, n2B]), None,
-        None
-    ) * np.min([np.sum(d1), np.sum(d2)])
+    if norm is None:
+        norm = np.max([np.sum(d1), np.sum(d2)])
+    
+    # l1_diff /= (np.max([n1A, n2A, n1B, n2B]) - np.min([n1A, n2A, n1B, n2B])) * norm
 
     return l1_diff
 

@@ -10,7 +10,7 @@ class TestFilm(unittest.TestCase):
         d1 = np.array([1])
         d2 = np.array([1])
         self.assertAlmostEqual(
-            s._calculate_structure_difference_simple_film(
+            s._calculate_structure_difference_simple_film_abs(
                 d1, 1, None, d2, 0, None, None
             ), 1
         )
@@ -19,7 +19,7 @@ class TestFilm(unittest.TestCase):
         d1 = np.array([2])
         d2 = np.array([1])
         self.assertAlmostEqual(
-            s._calculate_structure_difference_simple_film(
+            s._calculate_structure_difference_simple_film_abs(
                 d1, 1, None, d2, 0, None, 10
             ), 10
         )
@@ -28,7 +28,7 @@ class TestFilm(unittest.TestCase):
         d1 = np.array([1, 2, 3])
         d2 = np.array([3, 1, 1])
         self.assertAlmostEqual(
-            s._calculate_structure_difference_simple_film(
+            s._calculate_structure_difference_simple_film_abs(
                 d1, 1, 2, d2, 0, 1, 10
             ), 15
         )
@@ -37,7 +37,7 @@ class TestFilm(unittest.TestCase):
         d1 = np.array([1, 2, 3, 4])
         d2 = np.array([3, 1, 5])
         self.assertAlmostEqual(
-            s._calculate_structure_difference_simple_film(
+            s._calculate_structure_difference_simple_film_abs(
                 d1, 1, 2, d2, 0, 1, 10
             ), 21
         )

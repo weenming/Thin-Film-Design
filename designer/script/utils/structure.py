@@ -1,7 +1,9 @@
 import numpy as np
 from film import FilmSimple
 
-#TODO: optimize metric: calculate structure in smaller or larger thickness?
+# TODO: optimize metric: calculate structure in smaller or larger thickness?
+
+
 def diff_simple_film(film1: FilmSimple, film2: FilmSimple, metric='abs', norm=None, wl=750.):
     '''
     Calculate a metric characterizing the difference between two films:
@@ -43,8 +45,9 @@ def diff_simple_film(film1: FilmSimple, film2: FilmSimple, metric='abs', norm=No
     # norm(?) by the largest possible film
     if norm is None:
         norm = np.max([np.sum(d1), np.sum(d2)])
-    
-    # l1_diff /= (np.max([n1A, n2A, n1B, n2B]) - np.min([n1A, n2A, n1B, n2B])) * norm
+
+    l1_diff /= (np.max([n1A, n2A, n1B, n2B]) -
+                np.min([n1A, n2A, n1B, n2B])) * norm
 
     return l1_diff
 

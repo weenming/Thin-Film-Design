@@ -83,7 +83,7 @@ class FilmSimple(Film):
                 count += 1
         return count
 
-    def get_spec(self, inc_ang=None, wls=None)->spectrum.SpectrumSimple:
+    def get_spec(self, inc_ang=None, wls=None) -> spectrum.SpectrumSimple:
         """ return spectrum with specified wls and inc_ang
         """
         if len(self.spectrum) == 1:
@@ -104,7 +104,7 @@ class FilmSimple(Film):
             return self.add_spec_param(inc_ang, wls)
 
 
-    def get_all_spec_list(self):
+    def get_all_spec_list(self) -> list[spectrum.SpectrumSimple]:
         return self.spectrum
 
     def calculate_spectrum(self):
@@ -200,7 +200,7 @@ class FilmSimple(Film):
 
 
     # Other utility functions
-    def get_optical_thickness(self, wl):
+    def get_optical_thickness(self, wl) -> float:
         """
         Calculate the optical thickness of this film
 

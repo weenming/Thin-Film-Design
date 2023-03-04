@@ -31,7 +31,7 @@ def get_W_before_ith_layer(wls, d, n_layers, n_sub, n_inc, inc_ang, i):
         (W_i for every wl, s-polarized and p-polarized) 
     '''
     W_spec = np.empty((wls.shape[0] * 2, 2, 2), dtype='complex128')
-    _launch_propagation(W_spec, wls, d, n_layers, n_sub, n_inc, inc_ang, -1, i-1)
+    _launch_propagation(W_spec, wls, d, n_layers, n_sub, n_inc, inc_ang, -1, i - 1)
     return W_spec
 
 def get_W_after_ith_layer(wls, d, n_layers, n_sub, n_inc, inc_ang, i):
@@ -44,7 +44,7 @@ def get_W_after_ith_layer(wls, d, n_layers, n_sub, n_inc, inc_ang, i):
     Implementation: same as above
     '''
     W_spec = np.empty((wls.shape[0] * 2, 2, 2), dtype='complex128')
-    _launch_propagation(W_spec, wls, d, n_layers, n_sub, n_inc, inc_ang, i+1, d.shape[0])
+    _launch_propagation(W_spec, wls, d, n_layers, n_sub, n_inc, inc_ang, i + 1, d.shape[0])
     return W_spec
 
 def _launch_propagation(W_spec, wls, d, n_layers, n_sub, n_inc, inc_ang, 
@@ -113,7 +113,7 @@ def _launch_propagation(W_spec, wls, d, n_layers, n_sub, n_inc, inc_ang,
     # copy to pre-allocated space
     Ws_device.copy_to_host(W_spec)
 
-
+# BUG
 @cuda.jit
 def forward_propagation_simple_W_i(W_spec, wls, d, n_A_arr, n_B_arr,
                  n_sub_arr, n_inc_arr, inc_ang, wls_size, layer_number, 
@@ -190,9 +190,9 @@ def forward_propagation_simple_W_i(W_spec, wls, d, n_A_arr, n_B_arr,
         Wp[1, 0] = 0.5
         Wp[1, 1] = -0.5 / cos_inc
     else:
-        cosi = cos_arr[0]
-        ni = n_arr[0]
-        phi = 2 * cmath.pi * 1j * cosi * ni * d[0] / wl
+        cosi = cos_arr[i_start]
+        ni = n_arr[i_start]
+        phi = 2 * cmath.pi * 1j * cosi * ni * d[i_start] / wl
 
         coshi = cmath.cosh(phi)
         sinhi = cmath.sinh(phi)

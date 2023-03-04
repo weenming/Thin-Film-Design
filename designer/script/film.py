@@ -53,7 +53,9 @@ class FilmSimple(Film):
             raise ValueError(
                 "Bad material. Dispersion must be specified in gets.get_n")
         
-    
+        if d_init.shape == ():
+            d_init = np.array([d_init])
+
         assert len(d_init.shape) == 1, "Should be 1 dim array!"
         assert d_init.shape[0] < 250, "Not supported layer number!"
         self.d = d_init

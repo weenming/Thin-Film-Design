@@ -49,7 +49,9 @@ def get_W_after_ith_layer(wls, d, n_layers, n_sub, n_inc, inc_ang, i):
 
 def _launch_propagation(W_spec, wls, d, n_layers, n_sub, n_inc, inc_ang, 
                         i_start, i_end):
+    # BUG: This function and the kernel it calls is probably WRONG!!!!
     """
+    
 
     Parameters:
         i_start: index to start calculating Wi. If -1, incidence material
@@ -209,7 +211,7 @@ def forward_propagation_simple_W_i(W_spec, wls, d, n_A_arr, n_B_arr,
     # i should start with 1 (first M is already calculated)
 
     # forward propagation
-    for i in range(i_start, min(i_end+1, layer_number)):
+    for i in range(i_start, min(i_end + 1, layer_number)):
         cosi = cos_arr[i % 2]
         ni = n_arr[i % 2]
         phi = 2 * cmath.pi * 1j * cosi * ni * d[i] / wl
@@ -233,7 +235,7 @@ def forward_propagation_simple_W_i(W_spec, wls, d, n_A_arr, n_B_arr,
     # construct the last term D_{n+1} 
     # technically this is merely D which is not M (D^{-2}PD)
 
-    if i_end > layer_number:
+    if i_end > layer_number - 1: # including substrate
         Ms[0, 0] = 1.
         Ms[0, 1] = 1.
         Ms[1, 0] = n_sub * cos_sub

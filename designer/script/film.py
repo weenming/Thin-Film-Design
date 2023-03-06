@@ -69,7 +69,7 @@ class FilmSimple(Film):
 
         """
         for s in self.spectrum:
-            if s.WLS.all() == wls.all() and s.INC_ANG == inc_ang:
+            if (s.WLS == wls).all() and s.INC_ANG == inc_ang:
                 return
         spec = spectrum.SpectrumSimple(inc_ang, wls, self)
         self.spectrum.append(spec)

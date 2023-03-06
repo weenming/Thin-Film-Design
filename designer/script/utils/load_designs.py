@@ -49,14 +49,14 @@ def load_designs_single_spec(file_dir,
             design.film.calculate_spectrum()
             design.calculate_loss()
 
-            # load design process if asked to
-            if load_training_process:
-                _load_design_process(design, file_dir, n_A, n_B, n_sub)
-
             designs.append(design)
         except Exception as e:
             print(e, f"(run {run_idx})")
             continue # skip invalid d
+    # load design process if asked to
+    if load_training_process:
+        _load_design_process(designs, file_dir, n_A, n_B, n_sub)
+
     return designs
 
 def init_film_single_spec(f: FilmSimple, inc, wls):

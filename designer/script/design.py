@@ -56,6 +56,7 @@ class DesignSimple:
         Calculate the RMS wrt the target spectrum specified in self.target_film
         """
         self.loss = utils.loss.calculate_RMS(self.target_film, self.film)
+        return self.loss
 
     def flexible_TFNN_train(self, epoch, record=False):
         """

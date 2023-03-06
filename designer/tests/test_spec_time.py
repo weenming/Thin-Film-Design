@@ -89,6 +89,7 @@ def plot_time():
 
 if __name__ == "__main__":
     dif_n(2)
+    dif_n(200)
     # keep gpu occupied?
-    t = timeit.timeit(f"spec_gpu({200})", number=100000, setup="from __main__ import spec_gpu")
+    t = timeit.timeit(f"spec_gpu({200})", number=100, setup="from __main__ import spec_gpu")
     print(t)

@@ -26,7 +26,6 @@ def calculate_RMS(film1: FilmSimple, film2: FilmSimple):
         T_1 = np.append(R_1, this_spec_film1.get_T())
         T_2 = np.append(R_2, this_spec_film2.get_T())
     # merit: RMS
-    RMS = np.sqrt(np.square(R_1 - R_2).sum()
-                / R_1.shape[0] + np.square(T_1 - T_2).sum()
-                / T_1.shape[0])
+    RMS = np.sqrt((np.square(R_1 - R_2).sum() + np.square(T_1 - T_2).sum()) \
+                / (R_1.shape[0] + T_1.shape[0]))
     return RMS

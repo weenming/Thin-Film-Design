@@ -48,15 +48,26 @@ def get_spectrum_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
 
     # copy wls, d, n_layers, n_sub, n_inc, inc_ang to GPU
     wls_device = cuda.to_device(wls)
+    # d.astype('float64')
     d_device = cuda.to_device(d)
     # copy 2d arr into 1d as contiguous arr to save data transfer
-    n_A = n_layers[:, 0].copy(order="C") 
+    # BUG: this may be problematic. If the matrix it is copying from is row first
+    # This copy would result in a new array full of "holes" which the kernel func
+    # may not be aware of.
+    n_A = n_layers[:, 0].copy()
     n_A_device = cuda.to_device(n_A)
     # may have only 1 layer. 
     if layer_number == 1:
-        n_B_device = cuda.to_device(np.empty(wls_size))
+        # BUG: this might cause bug in 1 layer scenario. In the kernel function 
+        # nB and nA are used to construct a new array. The data types of these
+        # arrays should thus be same
+        # Spectrum objects the dtype of n is complex 128. keep same here
+
+        # copying n_A seems to work but using np.empty(wls_size, dtype='complex128')
+        # does not. I have literally no idea what is happening...
+        n_B_device = cuda.to_device(n_A.copy())
     else:
-        n_B = n_layers[:, 1].copy(order="C")
+        n_B = n_layers[:, 1].copy()
         n_B_device = cuda.to_device(n_B)
     n_sub_device = cuda.to_device(n_sub)
     n_inc_device = cuda.to_device(n_inc)

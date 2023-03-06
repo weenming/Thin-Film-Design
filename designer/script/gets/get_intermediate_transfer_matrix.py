@@ -49,7 +49,6 @@ def get_W_after_ith_layer(wls, d, n_layers, n_sub, n_inc, inc_ang, i):
 
 def _launch_propagation(W_spec, wls, d, n_layers, n_sub, n_inc, inc_ang, 
                         i_start, i_end):
-    # BUG: This function and the kernel it calls is probably WRONG!!!!
     """
     
 
@@ -179,7 +178,7 @@ def forward_propagation_simple_W_i(W_spec, wls, d, n_A_arr, n_B_arr,
     
     # Initialize W according to i_start
     # TODO: add the influence of n of incident material (when not air)  
-    if i_start < 0:
+    if i_start < 0: # inc
         Ws[0, 0] = 0.5
         Ws[0, 1] = 0.5 / cos_inc
         Ws[1, 0] = 0.5
@@ -189,9 +188,9 @@ def forward_propagation_simple_W_i(W_spec, wls, d, n_A_arr, n_B_arr,
         Wp[0, 1] = 0.5 / cos_inc
         Wp[1, 0] = 0.5
         Wp[1, 1] = -0.5 / cos_inc
-    else:
-        cosi = cos_arr[i_start]
-        ni = n_arr[i_start]
+    else: # fill W_0 with M_i
+        cosi = cos_arr[i_start % 2]
+        ni = n_arr[i_start % 2]
         phi = 2 * cmath.pi * 1j * cosi * ni * d[i_start] / wl
 
         coshi = cmath.cosh(phi)
@@ -235,7 +234,7 @@ def forward_propagation_simple_W_i(W_spec, wls, d, n_A_arr, n_B_arr,
     # construct the last term D_{n+1} 
     # technically this is merely D which is not M (D^{-2}PD)
 
-    if i_end > layer_number - 1: # including substrate
+    if i_end > layer_number - 1: # i_end == d.shape[0]: include substrate
         Ms[0, 0] = 1.
         Ms[0, 1] = 1.
         Ms[1, 0] = n_sub * cos_sub

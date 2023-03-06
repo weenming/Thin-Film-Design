@@ -45,13 +45,13 @@ def get_jacobi_simple(jacobi, wls, d, n_layers, n_sub, n_inc, inc_ang):
     wls_device = cuda.to_device(wls)
     d_device = cuda.to_device(d)
     # copy 2d arr into 1d as contiguous arr to save data transfer
-    n_A = n_layers[:, 0].copy(order="C") 
+    n_A = n_layers[:, 0].copy() 
     n_A_device = cuda.to_device(n_A)
     # may have only 1 layer.
     if layer_number == 1:
-        n_B_device = cuda.to_device(np.empty(wls_size))
+        n_B_device = cuda.to_device(np.empty(wls_size, dtype='complex128'))
     else:
-        n_B = n_layers[:, 1].copy(order="C")
+        n_B = n_layers[:, 1].copy()
         n_B_device = cuda.to_device(n_B)
     n_sub_device = cuda.to_device(n_sub)
     n_inc_device = cuda.to_device(n_inc)

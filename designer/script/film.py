@@ -57,7 +57,7 @@ class FilmSimple(Film):
             d_init = np.array([d_init])
 
         assert len(d_init.shape) == 1, "Should be 1 dim array!"
-        assert d_init.shape[0] < 250, "Not supported layer number!"
+        assert d_init.shape[0] < 250, "Too many layers!"
         self.d = d_init
         
         self.spectrum = []
@@ -195,7 +195,7 @@ class FilmSimple(Film):
         for spec in self.get_all_spec_list():
             spec.update_n() # calculate the n array again
             spec.outdate() # set the oudated flag of the stored spectrum(s)
-        return self.check_thickness()
+        return
 
     def get_layer_number(self):
         return self.d.shape[0]

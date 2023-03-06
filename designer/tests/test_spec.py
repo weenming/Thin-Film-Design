@@ -5,6 +5,7 @@ sys.path.append("./designer/script")
 import os
 import film as film
 import gets.get_n as get_n
+import gets.get_cpu.get_spectrum as get_spectrum_cpu
 
 import matplotlib.pyplot as plt
 
@@ -63,8 +64,32 @@ class TestFilm(unittest.TestCase):
         self.assertAlmostEqual(np.max(np.abs(f.spectrum[0].get_R() - expected_spec)), 0)
         self.assertAlmostEqual(np.max(np.abs(1 - f.spectrum[0].get_T() - expected_spec)), 0)
 
-        plt.plot(f.spectrum[0].get_R())
-        plt.plot()
+
     
+    def test_one_layer(self):
+        substrate = A = "SiO2"
+        B = "TiO2"
+        d = np.array([1000])
+        f = film.FilmSimple(B, A, substrate, d)
+        # must set spec before calculating spec
+        inc_ang = 60. # incident angle in degree
+        wls = np.linspace(500, 1000, 500)
+        f.add_spec_param(inc_ang, wls)
+        f.calculate_spectrum()
+        # read expected spec from file
+        # count relative path from VS Code project root.....
+        expected_spec = get_spectrum_cpu.get_spectrum(wls, d, np.array([B]), theta0=inc_ang)
+
+
+        self.assertAlmostEqual(np.max(np.abs(f.get_spec().get_R() - expected_spec[:wls.shape[0], 0])), 0)
+        self.assertAlmostEqual(np.max(np.abs(1 - f.get_spec().get_T() - f.get_spec().get_R())), 0)
+        
+        for _ in range(100):
+            f.calculate_spectrum()
+            self.assertAlmostEqual(np.max(np.abs(f.get_spec().get_R() - expected_spec[:wls.shape[0], 0])), 0)
+            self.assertAlmostEqual(np.max(np.abs(1 - f.get_spec().get_T() - f.get_spec().get_R())), 0)
+        
+        
+
 if __name__ == "__main__":
     unittest.main()

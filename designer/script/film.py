@@ -76,11 +76,12 @@ class FilmSimple(Film):
         return spec
 
     def remove_spec_param(self, inc_ang=None, wls=None):
-        assert wls != None or inc_ang != None, "Must specify which spec to del"
+        assert wls is not None or inc_ang is not None, "Must specify which spec to del"
         count = 0
         for s in self.spectrum:
-            if (wls != None and s.WLS == wls) or \
-                    (inc_ang != None and s.INC_ANG == inc_ang):
+            if (inc_ang is None and (s.WLS == wls).all()) or \
+                (wls is None and s.INC_ANG == inc_ang) or \
+                ((s.WLS == wls).all() == s.INC_ANG == inc_ang):
                 self.spectrum.remove(s)
                 count += 1
         return count

@@ -1,7 +1,7 @@
 import numpy as np
 import optimizer.needle_insert as insert
 import optimizer.LM_gradient_descent as gd
-import film
+from film import FilmSimple
 import utils.loss
 
 
@@ -11,9 +11,9 @@ class DesignSimple:
     """
 
     def __init__(self,
-                 target_film: film.FilmSimple,
-                 init_film: film.FilmSimple = None,
-                 film: film.FilmSimple = None
+                 target_film: FilmSimple,
+                 init_film: FilmSimple = None,
+                 film: FilmSimple = None
                  ):
         self.target_film = target_film
         if len(self.target_film.spectrum) == 0:
@@ -22,6 +22,7 @@ class DesignSimple:
         self.target_film.calculate_spectrum()
         self.film = film
         self.loss = None  # Diff of the spec of designed film and target spec in RMS
+        self.training_films: list[FilmSimple] = []
         
     def get_init_ot(self, wl=750.):
         assert self.init_film is not None, "undifined initial film!"

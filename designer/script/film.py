@@ -203,7 +203,7 @@ class FilmSimple(Film):
 
 
     # Other utility functions
-    def get_optical_thickness(self, wl) -> float:
+    def get_optical_thickness(self, wl, neglect_last_layer=False) -> float:
         """
         Calculate the optical thickness of this film
 
@@ -211,13 +211,15 @@ class FilmSimple(Film):
             wl (float):
                 wavelength at which refractive index is evaluated
         """
+        l = self.get_layer_number()
         n_A = self.get_n_A(wl)
         n_B = self.get_n_B(wl)
-        d_even = np.array([self.get_d()[i]
-                           for i in range(0, self.get_layer_number(), 2)])
-        d_odd = np.array([self.get_d()[i]
-                          for i in range(1, self.get_layer_number(), 2)])
-        return np.sum(n_A * d_even) + np.sum(n_B * d_odd)
+        d_even = np.array([self.get_d()[i] for i in range(0, l, 2)])
+        d_odd = np.array([self.get_d()[i] for i in range(1, l, 2)])
+        ot = np.sum(n_A * d_even) + np.sum(n_B * d_odd)            
+        if neglect_last_layer:
+            ot -= self.get_d()[-1] * (n_A if l % 2 == 1 else n_B)
+        return ot
 
 
 

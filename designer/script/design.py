@@ -31,9 +31,14 @@ class DesignSimple:
     def get_current_ot(self, wl=750.):
         return self.film.get_optical_thickness(wl)
 
-    def get_target_ot(self, wl=750.):
+    def get_target_ot(self, wl=750., correct_sub=True):
         assert self.target_film is not None, "undifined target film!"
-        return self.target_film.get_optical_thickness(wl)
+        f = self.target_film
+        # if the layer has the same material as the substrate, should not take into account
+        neglect_last = correct_sub and \
+                    ((f.get_n_A == f.get_n_sub and f.get_layer_number() % 2 == 1) or \
+                    (f.get_n_B == f.get_n_sub and f.get_layer_number() % 2 == 0))
+        return f.get_optical_thickness(wl, neglect_last_layer=neglect_last)
 
 
     def get_init_gt(self):

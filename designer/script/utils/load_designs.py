@@ -29,7 +29,7 @@ def load_designs_single_spec(file_dir,
                                                 np.loadtxt(file_dir + f'run_{run_idx}/final', dtype=float)*1000.
                                                 )  # final film
                                     )
-            except FileNotFoundError as e: # old experiments do not have init rec record
+            except Exception as e: # old experiments do not have init rec record
                 design = DesignSimple(f_target,
                     FilmSimple(n_A,
                                 n_B,

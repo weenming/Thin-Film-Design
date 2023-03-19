@@ -3,7 +3,24 @@ import film
 import gets.get_spectrum as get_spectrum
 
 
-class Spectrum:
+class BaseSpectrum:
+    def __init__(self):
+        pass
+
+    def get_R(self):
+        try:
+            return self.spec_R
+        except AttributeError:
+            raise ValueError('spec R not yet calculated')
+
+    
+    def get_T(self):
+        try:
+            return self.spec_T
+        except AttributeError:
+            raise ValueError('spec R not yet calculated')
+
+class Spectrum(BaseSpectrum):
     """
     An object containing the spectrum
 
@@ -15,12 +32,17 @@ class Spectrum:
         spec_T (np.array):
             The transmittance spectrum. Subject to future changes
     """
+    def __init__(self, incident_angle, wavelengths, spec_R, spec_T=None):
+        self.INC_ANG = incident_angle
+        self.WLS = wavelengths
+        self.spec_R = spec_R
+        if spec_T is None:
+            self.spec_T = 1 - spec_R
+        else:
+            self.spec_T = spec_T
+    
 
-    def __init__(self, incident_angles, wavelengths):
-        pass
-
-
-class SpectrumSimple(Spectrum):
+class SpectrumSimple(BaseSpectrum):
     """
     An object containing the spectrum
 
@@ -63,22 +85,7 @@ class SpectrumSimple(Spectrum):
         self.updated = True
 
     def outdate(self):
-        self.updated = False
-
-    def get_R(self):
-        try:
-            return self.spec_R
-        except AttributeError:
-            raise ValueError('spec R not yet calculated')
-
-    
-    def get_T(self):
-        try:
-            return self.spec_T
-        except AttributeError:
-            raise ValueError('spec R not yet calculated')
-
-        
+        self.updated = False        
 
     def is_updated(self):
         return self.updated

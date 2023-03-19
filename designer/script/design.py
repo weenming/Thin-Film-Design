@@ -1,11 +1,69 @@
 import numpy as np
+import copy
+
 import optimizer.needle_insert as insert
 import optimizer.LM_gradient_descent as gd
 from film import FilmSimple
+from spectrum import SpectrumSimple
 import utils.loss
 
+class Design:
+    def __init__(
+        self, 
+        target_specs: list[SpectrumSimple],
+        init_film: FilmSimple, 
+        film: FilmSimple
+    ):
+        self.init_film = copy.deepcopy(init_film) # save in case of aliasing
+        self.film = film
+        self.target_specs = target_specs
+        self.loss = None  # Diff of the spec between designed film and target
 
-class DesignSimple:
+    def calculate_loss(self) -> float:
+        """
+        Calculate the RMS wrt the target spectrum specified in self.target_film
+        """
+        self.loss = utils.loss.calculate_RMS_f_spec(self.film, self.target_specs)
+        return self.loss
+
+    def get_init_ot(self, wl=750.):
+        assert self.init_film is not None, "undifined initial film!"
+        return self.init_film.get_optical_thickness(wl)
+
+    def get_current_ot(self, wl=750.):
+        return self.film.get_optical_thickness(wl)
+
+        
+    def TFNN_train(self, epoch, record=False):
+        """
+        Combination of needle insertion and gradient descent
+
+        TODO: "record" functionality to study early-stopping in a single training
+        """
+        # preparing
+
+        # hyperparameter: exit condition of gd
+        error = 1e-5
+        max_step = 1000
+
+        for i in epoch:
+            # LM gradient descent
+            d_new, merit_new = gd.LM_optimize_d_simple(
+                self.film,
+                self.target_specs,
+                error,
+                max_step
+            )
+
+            # Needle insertion
+            insert.needle_insertion(
+                self.film,
+                self.target_specs,
+            )
+
+    
+
+class DesignSimple(Design):
     """
 
     """
@@ -15,21 +73,14 @@ class DesignSimple:
                  init_film: FilmSimple = None,
                  film: FilmSimple = None
                  ):
+        
         self.target_film = target_film
         if len(self.target_film.spectrum) == 0:
             raise ValueError("target_film must have nonempty spectrum")
-        self.init_film = init_film
         self.target_film.calculate_spectrum()
-        self.film = film
-        self.loss = None  # Diff of the spec of designed film and target spec in RMS
-        self.training_films: list[FilmSimple] = []
-        
-    def get_init_ot(self, wl=750.):
-        assert self.init_film is not None, "undifined initial film!"
-        return self.init_film.get_optical_thickness(wl)
+        target_specs = self.target_film.get_all_spec_list()
 
-    def get_current_ot(self, wl=750.):
-        return self.film.get_optical_thickness(wl)
+        super().__init__(target_specs, init_film, film)
 
     def get_target_ot(self, wl=750., correct_sub=True):
         assert self.target_film is not None, "undifined target film!"
@@ -57,36 +108,7 @@ class DesignSimple:
         assert self.target_film is not None, "undifined target film!"
         return self.get_current_ot(wl) / self.target_film.get_optical_thickness(wl)
 
-    def calculate_loss(self) -> float:
-        """
-        Calculate the RMS wrt the target spectrum specified in self.target_film
-        """
-        self.loss = utils.loss.calculate_RMS(self.target_film, self.film)
-        return self.loss
 
-    def flexible_TFNN_train(self, epoch, record=False):
-        """
-        Combination of needle insertion and gradient descent
-
-        TODO: "record" functionality to study early-stopping in a single training
-        """
-        # preparing
-
-        # hyperparameter: exit condition of gd
-        error = 1e-5
-        max_step = 1000
-
-        for i in epoch:
-            # LM gradient descent
-            d_new, merit_new = gd.LM_optimize_d_simple(
-                self.film,
-                self.target_film,
-                error,
-                max_step
-            )
-
-            # Needle insertion
-            insert.needle_insertion(
-                self.film,
-                self.target_film,
-            )
+class DesignForSpecSimple(Design):
+    def __init__(self, target_spec: SpectrumSimple, init_film: FilmSimple, film: FilmSimple):
+        super().__init__([target_spec], init_film, film)

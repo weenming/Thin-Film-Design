@@ -3,13 +3,14 @@ from gets.get_jacobi import get_jacobi_simple
 from gets.get_spectrum import get_spectrum_simple
 import time
 from film import FilmSimple
+from spectrum import SpectrumSimple
 
-def LM_optimize_d_simple(film: FilmSimple, target_film: FilmSimple, h_tol, max_step):
+def LM_optimize_d_simple(film: FilmSimple, target_specs: list[SpectrumSimple], h_tol, max_step):
     """
     
     """
     layer_number = film.get_layer_number()
-    target_spec_ls = target_film.get_all_spec_list()
+    target_spec_ls = target_specs
     
     # target spectrum: concatenate target spectrums to a single 1d array
     target_spectrum = np.array([])

@@ -34,6 +34,14 @@ class Design:
         return self.film.get_optical_thickness(wl)
 
         
+    def get_init_gt(self):
+        assert self.init_film is not None, "undifined initial film!"
+        return self.init_film.get_d().sum()
+
+    def get_current_gt(self):
+        return self.film.get_d().sum()
+
+        
     def TFNN_train(self, epoch, record=False):
         """
         Combination of needle insertion and gradient descent
@@ -90,14 +98,6 @@ class DesignSimple(Design):
                     ((f.get_n_A == f.get_n_sub and f.get_layer_number() % 2 == 1) or \
                     (f.get_n_B == f.get_n_sub and f.get_layer_number() % 2 == 0))
         return f.get_optical_thickness(wl, neglect_last_layer=neglect_last)
-
-
-    def get_init_gt(self):
-        assert self.init_film is not None, "undifined initial film!"
-        return self.init_film.get_d().sum()
-
-    def get_current_gt(self):
-        return self.film.get_d().sum()
 
     def get_target_gt(self, wl=750.):
         assert self.target_film is not None, "undifined target film!"

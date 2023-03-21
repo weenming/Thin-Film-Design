@@ -69,7 +69,7 @@ class FilmSimple(Film):
 
         """
         for s in self.spectrum:
-            if (s.WLS == wls).all() and s.INC_ANG == inc_ang:
+            if np.array_equal(s.WLS, wls) and s.INC_ANG == inc_ang:
                 return
         spec = spectrum.SpectrumSimple(inc_ang, wls, self)
         self.spectrum.append(spec)
@@ -79,9 +79,9 @@ class FilmSimple(Film):
         assert wls is not None or inc_ang is not None, "Must specify which spec to del"
         count = 0
         for s in self.spectrum:
-            if (inc_ang is None and (s.WLS == wls).all()) or \
+            if (inc_ang is None and np.array_equal(s.WLS, wls)) or \
                 (wls is None and s.INC_ANG == inc_ang) or \
-                ((s.WLS == wls).all() == s.INC_ANG == inc_ang):
+                (np.array_equal(s.WLS, wls) == s.INC_ANG == inc_ang):
                 self.spectrum.remove(s)
                 count += 1
         return count
@@ -100,7 +100,7 @@ class FilmSimple(Film):
                     "In the case of multiple spectrums, must specify inc_ang\
                     and wls")
             for s in self.spectrum:
-                if all(s.WLS == wls) and s.INC_ANG == inc_ang:
+                if np.array_equal(s.WLS, wls) and s.INC_ANG == inc_ang:
                     return s
             # Not found, add to get_spec
             print("WARNING: spec not in this film's spec list. add to film!")

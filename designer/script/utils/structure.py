@@ -1,5 +1,7 @@
 import numpy as np
 from film import FilmSimple
+import matplotlib.pyplot as plt
+
 
 # TODO: optimize metric: calculate structure in smaller or larger thickness?
 
@@ -160,3 +162,29 @@ def _calculate_structure_difference_simple_film_RMS(d1, n1A, n1B, d2, n2A, n2B, 
                 depth2 = np.sum(d1)  # so that will enter teh prev. if block
 
     return np.sqrt(diff)
+
+
+def plot_layer_thickness(film: FilmSimple):
+    # wl: middle wl of the first spec
+    d = film.get_d()
+    spec = film.get_all_spec_list()[0]
+    n_A = spec.n[spec.WLS.shape[0] // 2, 0]
+    n_B = spec.n[spec.WLS.shape[0] // 2, 1]
+    n_arr = [n_A, n_B]
+    
+    fig, ax = plt.subplots(1, 1)
+    cur_d = 0
+    for i in range(d.shape[0]):
+        this_n = n_arr[i % 2]
+        last_n = n_arr[(i - 1) % 2]
+        ax.plot([cur_d, cur_d + d[i]], [this_n, this_n], color='steelblue')
+        if i != 0:
+            ax.plot([cur_d, cur_d], [this_n, last_n], c='steelblue')
+        cur_d += d[i]
+    
+    # ax.set_xlim(0, 20000)
+    ax.set_xlabel('position / nm')
+    ax.set_xlim(0, None)
+    ax.set_title(f'refractive index distribution at {spec.WLS[spec.WLS.shape[0] // 2]: .0f} nm')
+    fig.set_size_inches(6, 1)
+    return ax, fig

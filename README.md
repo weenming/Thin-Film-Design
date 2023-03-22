@@ -27,11 +27,22 @@ Note that the version of cudatoolkit should match that of the version of the dri
 ## File structure
 
 - `script`
-  - `TFNN` implements training of TFNN  
+  - `gets` contains functions related to TMM 
     - `get_insert_jacobi.py` Calculate insertion Jacobi matrix for gradient in needle method using TFNN
     - `get_jacobi.py` Calculate Jacobi matrix in gradient descent using TFNN
     - `get_n.py` Calculate and set refractive indices in Film instances
     - `get_spectrum.py` Calculate spectrum from a film instance
+  - `optimizer` implements different optimization methods
+    - `LM_gradient_descent` executes GD optimization
+    - `needle_insert` executes the insertion process given insertion gradient
+  - `utils` contains general functions, tools for analysis etc.
+    - `load_deisgns`
+    - `loss` different loss functions given 
+      - `Film` instance and `Spectrum` instance
+      - Two `Film` instances
+    - `plot_spectrum`
+    - `sort`
+    - `structure` function to plot the structure of a `Film` instance
   - `design.py`
   - `film.py`
   - `LM_gradient_descent.py`

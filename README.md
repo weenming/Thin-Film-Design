@@ -37,9 +37,7 @@ Note that the version of cudatoolkit should match that of the version of the dri
     - `needle_insert` executes the insertion process given insertion gradient
   - `utils` contains general functions, tools for analysis etc.
     - `load_deisgns`
-    - `loss` different loss functions given 
-      - `Film` instance and `Spectrum` instance
-      - Two `Film` instances
+    - `loss` different loss functions
     - `plot_spectrum`
     - `sort`
     - `structure` function to plot the structure of a `Film` instance

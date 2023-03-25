@@ -158,14 +158,13 @@ class FilmSimple(Film):
             2d np.array, size is wls number * layer number. Refractive indices
         """
         n_arr = np.empty((wls.shape[0], self.get_layer_number()), dtype='complex128')
-        for i in range(wls.shape[0]):
-            wl = wls[i]
-            n_A = self.get_n_A(wl)
-            n_B = self.get_n_B(wl)
-            l_B = self.get_layer_number() // 2
-            l_A = self.get_layer_number() - l_B
-            n_arr[i, :] = np.array([n_A, n_B] * l_B +
-                                        [n_A] * (l_A - l_B))
+
+        n_A: np.array = self.get_n_A(wls)
+        n_B: np.array = self.get_n_B(wls)
+        l = self.get_layer_number()
+        
+        n_arr[:, [i for i in range(0, l, 2)]] = n_A.reshape((-1, 1))
+        n_arr[:, [i for i in range(1, l, 2)]] = n_B.reshape((-1, 1))
         return n_arr
 
     def calculate_n_sub(self, wls):

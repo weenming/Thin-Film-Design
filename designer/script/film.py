@@ -120,8 +120,15 @@ class FilmSimple(Film):
         assert np.min(self.d) > 0, "layers of zero thickness!"
 
     def remove_negative_thickness_layer(self):
-        indices = [self.get_d()[i] for i in range(self.get_layer_number()) \
-                    if self.get_d()[i] == 0]
+        indices = []
+        # first layer is never removed
+        for i in range(1, self.get_layer_number() - 1):
+            if self.get_d()[i] == 0:
+                indices += [i, i + 1]
+
+        if self.get_d()[self.get_layer_number() - 1] == 0:
+            indices.append(i)
+
         np.delete(self.d, indices)
 
     # Helper functions of insertion

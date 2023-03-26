@@ -150,11 +150,12 @@ class FilmSimple(Film):
         """
         d = self.get_d()
         assert 0 <= layer_index < d.shape[0], 'invalid insert layer'
-        assert d[layer_index] >= position and position >= 0, \
+        
+        assert d[layer_index] >= position - 1e-5 and position >= 0, \
             'invalid insert position'
 
         d = np.insert(d, [layer_index + 1, layer_index + 1], thickness)
-        d[layer_index + 2] = d[layer_index] - position
+        d[layer_index + 2] = max(d[layer_index] - position, 0)
         d[layer_index] = position
         self.update_d(d)
 

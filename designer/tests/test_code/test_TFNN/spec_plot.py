@@ -1,7 +1,6 @@
 import numpy as np
 import sys
 sys.path.append("./designer/script")
-import os
 import film as film
 import gets.get_n as get_n
 

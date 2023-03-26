@@ -103,7 +103,7 @@ class FilmSimple(Film):
                 if np.array_equal(s.WLS, wls) and s.INC_ANG == inc_ang:
                     return s
             # Not found, add to get_spec
-            print("WARNING: spec not in this film's spec list. add to film!")
+            print("WARNING: spec not in this film's spec list. New spec added to film!")
             return self.add_spec_param(inc_ang, wls)
 
 
@@ -119,23 +119,43 @@ class FilmSimple(Film):
     def check_thickness(self):
         assert np.min(self.d) > 0, "layers of zero thickness!"
 
-    def remove_negative_thickness_layer(self):
+    def remove_negative_thickness_layer(d, exclude=np.array([])):
         indices = []
+        
         # first layer is never removed
-        for i in range(1, self.get_layer_number() - 1):
-            if self.get_d()[i] == 0:
-                indices += [i, i + 1]
+        i = 1
+        while i < d.shape[0] - 1:
+            if d[i] <= 0 and i not in exclude:
+                d[i - 1] += d[i + 1]
+                d = np.delete(d, [i, i + 1])
 
-        if self.get_d()[self.get_layer_number() - 1] == 0:
-            indices.append(i)
+        if d[-1] <= 0:
+            d = np.delete(d, -1)
 
-        np.delete(self.d, indices)
+        d = np.delete(d, indices)
+
 
     # Helper functions of insertion
     def insert_layer(self, layer_index, position, thickness):
         """
         insert a layer at the specified position
+            B  ||   A   ||  B
+        insert at:  ^    (i == layer_index)
+            B  ||A||B||A||  B
+                 ^       (i == layer_index)
+                    ^    (i == layer_index + 1)
+                       ^ (i == layer_index + 2)
         """
+        d = self.get_d()
+        assert d[layer_index] >= position and position >= 0, \
+            'invalid insert position'
+        assert layer_index < d.shape[0], 'invalid insert layer'
+
+        d = np.insert(d, [layer_index + 1, layer_index + 1], thickness)
+        d[layer_index + 2] = d[layer_index] - position
+        d[layer_index] = position
+        self.update_d(d)
+
 
     def get_insert_layer_n(self, index):
         """
@@ -166,6 +186,7 @@ class FilmSimple(Film):
         n_arr[:, [i for i in range(0, l, 2)]] = n_A.reshape((-1, 1))
         n_arr[:, [i for i in range(1, l, 2)]] = n_B.reshape((-1, 1))
         return n_arr
+
 
     def calculate_n_sub(self, wls):
         """
@@ -202,6 +223,7 @@ class FilmSimple(Film):
         for spec in self.get_all_spec_list():
             spec.update_n() # calculate the n array again
             spec.outdate() # set the oudated flag of the stored spectrum(s)
+        
         return
 
     def get_layer_number(self):

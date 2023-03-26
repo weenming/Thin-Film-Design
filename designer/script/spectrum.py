@@ -4,8 +4,11 @@ import gets.get_spectrum as get_spectrum
 
 
 class BaseSpectrum:
-    def __init__(self):
-        pass
+    def __init__(self, incident_angle, wavelengths, spec_R, spec_T):
+        self.INC_ANG = incident_angle
+        self.WLS = wavelengths
+        self.spec_R = spec_R
+        self.spec_T = spec_T
 
     def get_R(self):
         try:
@@ -33,13 +36,12 @@ class Spectrum(BaseSpectrum):
             The transmittance spectrum. Subject to future changes
     """
     def __init__(self, incident_angle, wavelengths, spec_R, spec_T=None):
-        self.INC_ANG = incident_angle
-        self.WLS = wavelengths
-        self.spec_R = spec_R
         if spec_T is None:
-            self.spec_T = 1 - spec_R
+            spec_T = 1 - spec_R
         else:
-            self.spec_T = spec_T
+            spec_T = spec_T
+
+        super.__init__(incident_angle, wavelengths, spec_R, spec_T)
     
 
 class SpectrumSimple(BaseSpectrum):

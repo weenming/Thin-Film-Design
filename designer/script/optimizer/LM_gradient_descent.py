@@ -5,16 +5,17 @@ from gets.get_spectrum import get_spectrum_simple
 from film import FilmSimple
 from spectrum import BaseSpectrum
 
-N_SPECTRUM_TYPE = 2 # R and T
 
 def LM_optimize_d_simple(film: FilmSimple, target_spec_ls: list[BaseSpectrum], h_tol, max_step):
     """
     
     """
 
+    # Prep: calculate refractive index & stack target spectrum into one array
     target_spec = np.array([])
     n_arrs_ls = []
     for s in target_spec_ls:
+        # both R and T are calculated
         target_spec = np.append(target_spec, s.get_R())
         target_spec = np.append(target_spec, s.get_T())
         # calculate refractive indices in advance and store to save time
@@ -23,16 +24,14 @@ def LM_optimize_d_simple(film: FilmSimple, target_spec_ls: list[BaseSpectrum], h
             film.calculate_n_sub(s.WLS), 
             film.calculate_n_inc(s.WLS)])
 
-    # d: current d of designed film
-    d = film.get_d()
-
     # allocate memory for J and f
     J = np.empty((target_spec.shape[0], d.shape[0]))
     f = np.empty(target_spec.shape[0])
     f_new = np.empty(target_spec.shape[0])
 
-    # before first iteration, calculate g and A
-    stack_J(J, n_arrs_ls, d, target_spec_ls) # use address reference, no return value
+    # Initialize for LM: before first iteration, calculate g and A
+    d = film.get_d()
+    stack_J(J, n_arrs_ls, d, target_spec_ls) # use address reference, so no return value
     stack_f(f, n_arrs_ls, d, target_spec_ls, target_spec)
     g = np.dot(J.T, f)
     A = np.dot(J.T, J)
@@ -93,7 +92,8 @@ def stack_f(
     n_arrs_ls: list[list[np.array]], 
     d, 
     target_spec_ls: list[BaseSpectrum], 
-    target_spec
+    target_spec,
+    get_f = get_spectrum_simple
 ):
     """
     target specs may have to be calculated using different params
@@ -111,9 +111,9 @@ def stack_f(
     """
     i = 0
     for s, n_arrs in zip(target_spec_ls, n_arrs_ls):
-        wls_num = s.WLS.shape[0] * N_SPECTRUM_TYPE
+        wls_num = s.WLS.shape[0] * 2 # R and T
         # note that numpy array slicing does not allocate new space in memory
-        get_spectrum_simple(
+        get_f(
             f_old[i: i + wls_num],
             s.WLS,
             d,
@@ -131,16 +131,17 @@ def stack_J(
     J_old, 
     n_arrs_ls, 
     d, 
-    target_spec_ls: list[BaseSpectrum]
+    target_spec_ls: list[BaseSpectrum],
+    get_J = get_jacobi_simple
 ):
     """
     target specs may have to be calculated using different params
     """
     i = 0
     for s, n_arrs in zip(target_spec_ls, n_arrs_ls):
-        this_wls_num = s.WLS.shape[0] * N_SPECTRUM_TYPE
+        this_wls_num = s.WLS.shape[0] * 2 # R and T
         # only reflectance
-        get_jacobi_simple(
+        get_J(
             J_old[i: i + this_wls_num, :],
             s.WLS, 
             d,

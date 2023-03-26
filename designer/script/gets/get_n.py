@@ -1,6 +1,6 @@
 from numpy import *
 import numpy as np
-import scipy
+
 
 
 # use these wrapper functions to select which model / exp data to use

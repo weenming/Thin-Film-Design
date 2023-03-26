@@ -1,183 +1,356 @@
-import sys
-
-from numpy import *
-from get_n import get_n
-
-
-def inserted_layers(d, materials, insert_layer_num, insert_position, insert_thickness=0.00001):
-    # insert_layer_num 是插入前，被插入的层的index
-    assert d[insert_layer_num] >= insert_position, 'insert position out of range of the inserted layer'
-    if materials[insert_layer_num] == 'SiO2_OIC':
-        insert_material = 'Nb2O5_OIC'
-        inserted_material = 'SiO2_OIC'
-    elif materials[insert_layer_num] == 'Nb2O5_OIC':
-        insert_material = 'SiO2_OIC'
-        inserted_material = 'Nb2O5_OIC'
-    elif materials[insert_layer_num] == 'SiO2':
-        insert_material = 'TiO2'
-        inserted_material = 'SiO2'
-    elif materials[insert_layer_num] == 'TiO2':
-        insert_material = 'SiO2'
-        inserted_material = 'TiO2'
-
-    i = insert_layer_num
-    materials_new = insert(materials, i, inserted_material)
-    materials_new = insert(materials_new, i + 1, insert_material)
-    d_new = insert(d, i, insert_position)
-    d_new[i + 1] -= insert_position
-    d_new = insert(d_new, i + 1, insert_thickness)
-    return d_new, materials_new
+import numpy as np
+import cmath
+from numba import cuda
+from gets.mat_lib import mul_to # multiply
+from gets.mat_lib import tsp # transpose
 
 
-def get_insert_jacobi_TFNN(wls, d, materials, insert_search_pts):
-    return 0
 
-
-def get_insert_jacobi_faster(wls, d, materials, insert_search_pts, insert_thickness=0.00001, theta0=7):
-    '''
-    :param wls: wavelengths
-    :param d: thickness
-    :param materials: materials
-    :param insert_search_pts: calculate insert gradient at insert_search_pts points in every layer
-    :param theta0 incident angle in degree
-    :return: a Jacobi matrix with shape of 2*wls.shape[0] by insert_search_pts*layer_number
-    '''
-    # 薄膜数，不算基底
-    layer_number = d.shape[0]
-    # 入射角, 转化为degree
-    theta0 = theta0 / 180 * pi
-
-    # 遍历所有的待测波长，存到2N*1 spectrum里(先R再T)。
-    jacobi = zeros((2 * wls.shape[0], insert_search_pts * layer_number))
-    for wl_index in range(wls.shape[0]):
-        # 折射率 返回layer_number+2个数字，因为基底和空气也在里面
-        wl = wls[wl_index]
-        n = get_n(wl, materials)
-        # 每一层的角度，theta[k]=theta_k,长度是layer_number+2
-        cosis = zeros((layer_number + 2, 1), dtype='complex_')
-        for i in range(layer_number + 2):
-            cosis[i] = sqrt(1 - (sin(theta0)/n[i])**2)
-
-        # 正向传播
-        inv_D0_s = array([[0.5, 0.5 / cos(theta0)], [0.5, -0.5 / cos(theta0)]])
-        inv_D0_p = array([[0.5, 0.5 / cos(theta0)], [0.5, -0.5 / cos(theta0)]])
-        Dnplus1_s = array([[1., 1.], [n[layer_number + 1, 0] * cosis[layer_number + 1, 0],
-                                      -n[layer_number + 1, 0] * cosis[layer_number + 1, 0]]])
-        Dnplus1_p = array(
-            [[n[layer_number + 1, 0], n[layer_number + 1, 0]],
-             [cosis[layer_number + 1, 0], -cosis[layer_number + 1, 0]]])
-        Ms = zeros((layer_number + 2, 2, 2), dtype="complex_")
-        Mp = Ms.copy()
-
-        Ms[layer_number + 1, 0:, 0:] = Dnplus1_s.copy()
-        Mp[layer_number + 1, 0:, 0:] = Dnplus1_p.copy()
-        Ms[0, 0:, 0:] = inv_D0_s.copy()
-        Mp[0, 0:, 0:] = inv_D0_p.copy()
-        for i in range(1, layer_number + 1):
-            # M(k)是M_k,在dimension3上的长度是layer_number+2. 还要注意到M_n+1是最先乘的.
-            # 只要是切片，就是ndarray，只有索引所有维度才能得到ndarray里的数字类型,注意到n[0]是空气,theta[0]也是空气，d[0]是第一层膜
-            cosi = cosis[i, 0]
-            phi = 2 * pi * 1j * cosi * n[i, 0] * d[i - 1] / wl
-
-            ni = n[i, 0]
-            coshi = cosh(phi)
-            sinhi = sinh(phi)
-            Ms[i, 0:, 0:] = array([[coshi, sinhi / cosi / ni], [cosi * ni * sinhi, coshi]])
-            Mp[i, 0:, 0:] = array([[coshi, sinhi * ni / cosi], [cosi / ni * sinhi, coshi]])
-
-        Ws_forward = zeros((layer_number + 2, 2, 2), dtype="complex_")
-        Wp_forward = Ws_forward.copy()
-        Ws_backward = Ws_forward.copy()
-        Wp_backward = Ws_forward.copy()
-
-        Ws_forward[0, 0:, 0:] = Ms[0, 0:, 0:].copy()
-        Wp_forward[0, 0:, 0:] = Mp[0, 0:, 0:].copy()
-        Ws_backward[layer_number+1, 0:, 0:] = Ms[layer_number+1, 0:, 0:]
-        Wp_backward[layer_number+1, 0:, 0:] = Mp[layer_number+1, 0:, 0:]
-        for i in range(1, layer_number + 2):
-            Ws_forward[i, 0:, 0:] = dot(Ws_forward[i-1, 0:, 0:], Ms[i, 0:, 0:])
-            Wp_forward[i, 0:, 0:] = dot(Wp_forward[i-1, 0:, 0:], Mp[i, 0:, 0:])
-            Ws_backward[layer_number+1-i, 0:, 0:] = dot(Ms[layer_number+1-i, 0:, 0:],
-                                                        Ws_backward[layer_number+2-i, 0:, 0:])
-            Wp_backward[layer_number+1-i, 0:, 0:] = dot(Mp[layer_number+1-i, 0:, 0:],
-                                                        Wp_backward[layer_number+2-i, 0:, 0:])
-        rs = Ws_forward[layer_number+1, 1, 0] / Ws_forward[layer_number+1, 0, 0]
-        rp = Wp_forward[layer_number+1, 1, 0] / Wp_forward[layer_number+1, 0, 0]
-        ts = 1 / Ws_forward[layer_number+1, 0, 0]
-        tp = 1 / Wp_forward[layer_number+1, 0, 0]
-        R = ((rs * rs.conjugate() + rp * rp.conjugate()) / 2).real
-        T = (cosis[layer_number + 1, 0] / cos(theta0) * n[layer_number + 1, 0] * (
-                ts * ts.conjugate() + tp * tp.conjugate()) / 2).real
-
-        for i in range(d.shape[0]):
-            for j in range(insert_search_pts):
-                d_new, materials_new = inserted_layers(d, materials, i, j*d[i]/insert_search_pts, insert_thickness)
-                n = get_n(wl, materials_new)
-                # 每一层的角度，theta[k]=theta_k,长度是layer_number+2
-                cosis = zeros((layer_number + 4, 1), dtype='complex_')
-                for k in range(layer_number + 4):
-                    cosis[k] = sqrt(1 - (sin(theta0) / n[k]) ** 2)
-
-                Ms_new = identity(2)
-                Mp_new = identity(2)
-                for l in range(i, i+3):
-                    cosl = cosis[l+1, 0]
-                    phi = 2 * pi * 1j * cosl * n[l+1, 0] * d_new[l] / wl
-                    nl = n[l+1, 0]
-                    coshl = cosh(phi)
-                    sinhl = sinh(phi)
-                    Ms_new = dot(Ms_new, array([[coshl, sinhl / cosl / nl], [cosl * nl * sinhl, coshl]]))
-                    Mp_new = dot(Mp_new, array([[coshl, sinhl * nl / cosl], [cosl / nl * sinhl, coshl]]))
-
-                Ws = dot(dot(Ws_forward[i, 0:, 0:], Ms_new), Ws_backward[i+2, 0:, 0:])
-                Wp = dot(dot(Wp_forward[i, 0:, 0:], Mp_new), Wp_backward[i+2, 0:, 0:])
-
-                rs = Ws[1, 0] / Ws[0, 0]
-                rp = Wp[1, 0] / Wp[0, 0]
-                ts = 1 / Ws[0, 0]
-                tp = 1 / Wp[0, 0]
-                R_new = (rs * rs.conjugate() + rp * rp.conjugate()) / 2
-                T_new = cosis[-1, 0] / cos(theta0) * n[-1, 0] * (
-                            ts * ts.conjugate() + tp * tp.conjugate()) / 2
-                jacobi[wl_index, j + i * insert_search_pts] = (R_new.real - R)/insert_thickness
-                jacobi[wl_index + wls.shape[0], j + i * insert_search_pts] = (T_new.real - T)/insert_thickness
-    return jacobi
-
-
-def get_insert_jacobi_faster_multi_inc(wls, d, materials, insert_search_pts, insert_thickness=0.00001, theta0=array([7])):
-    jacobi = zeros((2 * theta0.shape[0] * wls.shape[0], insert_search_pts * d.shape[0]))
-    for i in range(theta0.shape[0]):
-        jacobi[i * 2 * wls.shape[0]: (i + 1) * 2 * wls.shape[0], :] = get_insert_jacobi_faster(wls, d, materials, insert_search_pts, insert_thickness, theta0[i])
-    return jacobi
-
-def get_insert_jacobi(wls, d, materials, insert_search_pts):
-    from gets.get_spectrum import get_spectrum
+def get_insert_jacobi_simple(jacobi, wls, d, n_layers, n_sub, n_inc, inc_ang):
     """
-    Calculates jacobi matrix (wls.shape[0] by insert_search_pts*layer_number)of insertion gradient. To be replaced by using TFNN
-    :param wls:
-    :param d:
-    :param materials:
-    :param insert_search_pts:
-    :return:
+    This function calculates the Jacobi matrix of a given TFNN. Back 
+    propagation is implemented to acquire accurate result.
+    NOTE: at maximum, MAX_LAYER_NUMBER layers supported
+    NOTE: only difference from gd jacobi: more layers allowed for search.
+
+    Parameters:
+        jacobi (2d np.array):
+            size: wls.shape[0] \cross d.shape[0] 
+            pre-allocated memory space for returning jacobi
+        wls (1d np.array):
+            wavelengths of the target spectrum
+        d (1d np.array):
+            multi-layer thicknesses after last iteration
+        n_layers (2d np.array): 
+            size: wls.shape[0] \cross d.shape[0]. refractive indices of 
+            each *layer*
+        n_sub (1d np.array):
+            refractive indices of the substrate
+        n_inc (1d np.array):
+            refractive indices of the incident material
+        inc_ang (float):
+            incident angle in degree
     """
+    # layer number of thin film, substrate not included
     layer_number = d.shape[0]
-    insert_jacobi = zeros((2*wls.shape[0], layer_number * insert_search_pts))
-    print('start searching for insertion place')
+    # convert incident angle in degree to rad
+    inc_ang_rad = inc_ang / 180 * np.pi
+    # traverse all wl, save R and T to the 2N*1 np.array spectrum. [R, T]
+    wls_size = wls.shape[0]
+    
+    # TODO: move the copy of wls, n arr to outer loop 
+    # (caller of spec, for example LM optimizer) 
+    # Maybe allowing it to pass in additional device arr would be a good idea
+
+    # copy wls, d, n_layers, n_sub, n_inc, inc_ang to GPU
+    wls_device = cuda.to_device(wls)
+    d_device = cuda.to_device(d)
+    # copy 2d arr into 1d as contiguous arr to save data transfer
+    n_A = n_layers[:, 0].copy() 
+    n_A_device = cuda.to_device(n_A)
+    # may have only 1 layer.
+    if layer_number == 1:
+        n_B_device = cuda.to_device(np.empty(wls_size, dtype='complex128'))
+    else:
+        n_B = n_layers[:, 1].copy()
+        n_B_device = cuda.to_device(n_B)
+    n_sub_device = cuda.to_device(n_sub)
+    n_inc_device = cuda.to_device(n_inc)
+
+    # allocate space for Jacobi matrix
+    jacobi_device = cuda.device_array((wls_size * 2, layer_number),\
+         dtype="float64")
+
+    # invoke kernel
+    block_size = 16 # threads per block
+    grid_size = (wls_size + block_size - 1) // block_size # blocks per grid
+
+    forward_and_backward_propagation[grid_size, block_size](
+        jacobi_device,
+        wls_device,
+        d_device, 
+        n_A_device,
+        n_B_device,
+        n_sub_device,
+        n_inc_device,
+        inc_ang_rad,
+        wls_size,
+        layer_number
+    )
+    cuda.synchronize()
+    # copy to pre-allocated space
+    jacobi_device.copy_to_host(jacobi)
+
+
+@cuda.jit
+def forward_and_backward_propagation(jacobi, wls, d, n_A_arr, n_B_arr,
+                 n_sub_arr, n_inc_arr, inc_ang, wls_size, layer_number):
+    """
+    Parameters:
+        jacobi (cuda.device_array):
+            size: wls_size * 2 \corss layer_number
+            device array for storing calculated jacobi matrix
+        wls (cuda.device_array):
+            wavelengths
+        d (cuda.device_array):
+        n_A (cuda.device_array):
+            n of material A at different wls
+        n_B (cuda.device_array)
+        n_sub
+        n_inc
+        inc_ang (float):
+            incident angle in rad
+        wls_size:
+            number of wavelengths
+        layer_number:
+            number of layers
+    """
+    thread_id = cuda.grid(1)
+    # check this thread is valid
+    if thread_id > wls_size - 1:
+        return
+    # each thread calculates one wl
+    wl = wls[thread_id]
+    # inc_ang is already in rad
+    n_A = n_A_arr[thread_id]
+    n_B = n_B_arr[thread_id]
+    n_sub = n_sub_arr[thread_id]
+    n_inc = n_inc_arr[thread_id]
+    # Incident angle in each layer. 
+    # Snell's law: n_a sin(phi_a) = n_b sin(phi_b)
+    cos_A = cmath.sqrt(1 - ((n_inc / n_A) * cmath.sin(inc_ang)) ** 2)
+    cos_B = cmath.sqrt(1 - ((n_inc / n_B) * cmath.sin(inc_ang)) ** 2)
+    cos_inc = cmath.cos(inc_ang)
+    cos_sub = cmath.sqrt(1 - ((n_inc / n_sub) * cmath.sin(inc_ang)) ** 2)
+    
+    # choose cos from arr of size 2. 
+    # Use local array which is private to thread
+    cos_arr = cuda.local.array(2, dtype="complex128")
+    cos_arr[0] = cos_A
+    cos_arr[1] = cos_B
+
+    n_arr = cuda.local.array(2, dtype="complex128")
+    n_arr[0] = n_A
+    n_arr[1] = n_B   
+
+    '''
+    FORWARD PROPAGATION
+    '''
+
+    # Allocate space for M 
+    # NOTE: this implementation is shit. Need to find a way to make 
+    # numba compile MAX_LAYER_NUMBER into constant...
+    # Now I am MANUALLY EXPANDING THE CONSTANT INTO EVERY EXPRESSION
+    # NOTE: Support MAX_LAYER_NUMBER layers for now.
+    # also note that allocation of large space drastically affect the 
+    # performance of the algorithm
+    MAX_LAYER_NUMBER = 2500
+    # bad news: dynamic memory allocation not supported on GPU
+    Ms = cuda.local.array((2500 + 2, 2, 2), dtype="complex128") # NOTE: MAX_LAYER_NUMBER
+    Mp = cuda.local.array((2500 + 2, 2, 2), dtype="complex128") # NOTE: MAX_LAYER_NUMBER
+
+    # Allocate space for W. Fill with first term D_{0}^{-1}
+    # TODO: add the influence of n of incident material (when not air)
+    Ws = cuda.local.array((2500 + 2, 2, 2), dtype="complex128") # NOTE: MAX_LAYER_NUMBER
+    Ws[0, 0, 0] = 0.5
+    Ws[0, 0, 1] = 0.5 / cos_inc
+    Ws[0, 1, 0] = 0.5
+    Ws[0, 1, 1] = -0.5 / cos_inc
+    
+    Wp = cuda.local.array((2500 + 2, 2, 2), dtype="complex128") # NOTE: MAX_LAYER_NUMBER
+    Wp[0, 0, 0] = 0.5
+    Wp[0, 0, 1] = 0.5 / cos_inc
+    Wp[0, 1, 0] = 0.5
+    Wp[0, 1, 1] = -0.5 / cos_inc
+
     for i in range(layer_number):
-        for j in range(insert_search_pts):
-            # # print(f'{(i*insert_search_pts+j)/(layer_number*insert_search_pts)} completed')
-            # if materials[i] == 'SiO2_OIC':
-            #     insert_material = 'Nb2O5_OIC'
-            # else:
-            #     insert_material = 'SiO2_OIC'
-            #
-            # materials_new = insert(materials, i, materials[i])
-            # materials_new = insert(materials_new, i+1, insert_material)
-            # d_new = insert(d, i, d[i]*j/insert_search_pts)
-            # d_new[i+1] *= 1 - j/insert_search_pts
-            # d_new = insert(d_new, i+1, 0.001)
-            d_new, materials_new = inserted_layers(d, materials, i, d[i]*j/insert_search_pts)
-            insert_jacobi[:, i*insert_search_pts+j] = (get_spectrum(wls, d_new, materials_new, theta0=60.) - get_spectrum(wls, d, materials, theta0=60.))[:, 0]*1e5
+        cosi = cos_arr[i % 2]
+        ni = n_arr[i % 2]
+        phi = 2 * cmath.pi * 1j * cosi * ni * d[i] / wl
 
-    return insert_jacobi
+        coshi = cmath.cosh(phi)
+        sinhi = cmath.sinh(phi)
 
+        Ms[i + 1, 0, 0] = coshi
+        Ms[i + 1, 0, 1] = sinhi / cosi / ni
+        Ms[i + 1, 1, 0] = cosi * ni * sinhi
+        Ms[i + 1, 1, 1] = coshi
+
+        Mp[i + 1, 0, 0] = coshi
+        Mp[i + 1, 0, 1] = sinhi * ni / cosi
+        Mp[i + 1, 1, 0] = cosi / ni * sinhi
+        Mp[i + 1, 1, 1] = coshi
+
+        mul_to(Ws[i, :, :], Ms[i + 1, :, :], Ws[i + 1, :, :])
+        mul_to(Wp[i, :, :], Mp[i + 1, :, :], Wp[i + 1, :, :])
+
+    # construct the last term D_{n+1} 
+    # technically this is merely D which is not M (D^{-2}PD)
+    Ms[layer_number + 1, 0, 0] = 1.
+    Ms[layer_number + 1, 0, 1] = 1.
+    Ms[layer_number + 1, 1, 0] = n_sub * cos_sub
+    Ms[layer_number + 1, 1, 1] = n_sub * cos_sub
+
+    Mp[layer_number + 1, 0, 0] = n_sub
+    Mp[layer_number + 1, 0, 1] = n_sub
+    Mp[layer_number + 1, 1, 0] = cos_sub
+    Mp[layer_number + 1, 1, 1] = cos_sub
+
+    mul_to(Ws[layer_number, :, :], Ms[layer_number + 1, :, :], Ws[layer_number + 1, :, :])
+    mul_to(Wp[layer_number, :, :], Mp[layer_number + 1, :, :], Wp[layer_number + 1, :, :])
+
+    # retrieve R and T (calculate the factor before energy flux)
+    # Note that spectrum is array on device
+    rs = Ws[layer_number + 1, 1, 0] / Ws[layer_number + 1, 0, 0]
+    rp = Wp[layer_number + 1, 1, 0] / Wp[layer_number + 1, 0, 0]
+    R = (rs * rs.conjugate() + rp * rp.conjugate()) / 2
+
+    # T should be R - 1
+    ts = 1 / Ws[layer_number + 1, 0, 0]
+    tp = 1 / Wp[layer_number + 1, 0, 0]
+    T = cos_sub / cos_inc * n_sub * (
+        ts * ts.conjugate() + tp * tp.conjugate()) / 2
+
+
+    '''
+    BACKWARD PROPAGATION
+    '''
+    # NOTE: integer 250 here should be constant MAX_LAYER_NUMBER
+    partial_Ws_r = cuda.local.array((2500 + 2, 2, 2), dtype="complex128")
+    partial_Ws_t = cuda.local.array((2500 + 2, 2, 2), dtype="complex128")
+    partial_Wp_r = cuda.local.array((2500 + 2, 2, 2), dtype="complex128")
+    partial_Wp_t = cuda.local.array((2500 + 2, 2, 2), dtype="complex128")
+    partial_Ms_r = cuda.local.array((2500 + 2, 2, 2), dtype="complex128")
+    partial_Ms_t = cuda.local.array((2500 + 2, 2, 2), dtype="complex128")
+    partial_Mp_r = cuda.local.array((2500 + 2, 2, 2), dtype="complex128")
+    partial_Mp_t = cuda.local.array((2500 + 2, 2, 2), dtype="complex128")
+    
+    # \partial_{W_{n + 1}} r or t (derivative from the last layer)
+    partial_Ws_r[layer_number + 1, 0, 0] = -Ws[layer_number + 1, 1, 0] / Ws[layer_number + 1, 0, 0] ** 2
+    partial_Ws_r[layer_number + 1, 0, 1] = 0
+    partial_Ws_r[layer_number + 1, 1, 0] = 1 / Ws[layer_number + 1, 0, 0]
+    partial_Ws_r[layer_number + 1, 1, 1] = 0
+    
+    partial_Ws_t[layer_number + 1, 0, 0] = -1 / Ws[layer_number + 1, 0, 0] ** 2
+    partial_Ws_t[layer_number + 1, 0, 1] = 0
+    partial_Ws_t[layer_number + 1, 1, 0] = 0
+    partial_Ws_t[layer_number + 1, 1, 1] = 0
+    
+    partial_Wp_r[layer_number + 1, 0, 0] = -Wp[layer_number + 1, 1, 0] / Wp[layer_number + 1, 0, 0] ** 2
+    partial_Wp_r[layer_number + 1, 0, 1] = 0
+    partial_Wp_r[layer_number + 1, 1, 0] = 1 / Wp[layer_number + 1, 0, 0]
+    partial_Wp_r[layer_number + 1, 1, 1] = 0
+    
+    partial_Wp_t[layer_number + 1, 0, 0] = -1 / Wp[layer_number + 1, 0, 0] ** 2
+    partial_Wp_t[layer_number + 1, 0, 1] = 0
+    partial_Wp_t[layer_number + 1, 1, 0] = 0
+    partial_Wp_t[layer_number + 1, 1, 1] = 0
+
+    # get \partial_W and thus \partial_M for every M
+    tmp_matrix = cuda.local.array((2, 2), dtype="complex128") # for transpose
+    for i in range(layer_number):
+        # s-polarized
+        tsp(Ms[layer_number + 1 - i, :, :], tmp_matrix)
+        mul_to(
+            partial_Ws_r[layer_number + 1 - i, :, :],
+            tmp_matrix,
+            partial_Ws_r[layer_number - i, :, :]
+            )
+
+        tsp(Ws[layer_number - i - 1, 0:, 0:], tmp_matrix)
+        mul_to(
+            tmp_matrix,
+            partial_Ws_r[layer_number - i, 0:, 0:],
+            partial_Ms_r[layer_number - i, 0:, 0:]
+            )
+        
+        tsp(Ms[layer_number + 1 - i, 0:, 0:], tmp_matrix)
+        mul_to(
+            partial_Ws_t[layer_number + 1 - i, 0:, 0:],
+            tmp_matrix,
+            partial_Ws_t[layer_number - i, 0:, 0:]
+            )
+
+        tsp(Ws[layer_number - i - 1, 0:, 0:], tmp_matrix)
+        mul_to(
+            tmp_matrix,
+            partial_Ws_t[layer_number - i, 0:, 0:],
+            partial_Ms_t[layer_number - i, 0:, 0:]
+            )
+
+        # p-polarized
+        tsp(Mp[layer_number + 1 - i, :, :], tmp_matrix)
+        mul_to(
+            partial_Wp_r[layer_number + 1 - i, :, :],
+            tmp_matrix,
+            partial_Wp_r[layer_number - i, :, :]
+            )
+
+        tsp(Wp[layer_number - i - 1, 0:, 0:], tmp_matrix)
+        mul_to(
+            tmp_matrix,
+            partial_Wp_r[layer_number - i, 0:, 0:],
+            partial_Mp_r[layer_number - i, 0:, 0:]
+            )
+        
+        tsp(Mp[layer_number + 1 - i, 0:, 0:], tmp_matrix)
+        mul_to(
+            partial_Wp_t[layer_number + 1 - i, 0:, 0:],
+            tmp_matrix,
+            partial_Wp_t[layer_number - i, 0:, 0:]
+            )
+
+        tsp(Wp[layer_number - i - 1, 0:, 0:], tmp_matrix)
+        mul_to(
+            tmp_matrix,
+            partial_Wp_t[layer_number - i, 0:, 0:],
+            partial_Mp_t[layer_number - i, 0:, 0:]
+            )
+
+    # derive \partial_d r (t) from \partial_M r (t)
+
+    for i in range(layer_number):
+        # M[i + 1] corresponds to i-th layer 
+        # (first layer with material A is the 0-th layer)
+        cosi = cos_arr[i % 2]
+        phi = 2 * cmath.pi * 1j * cosi * n_arr[i % 2] * d[i] / wl
+        ni = n_arr[i % 2]
+        coshi = cmath.cosh(phi)
+        sinhi = cmath.sinh(phi)
+
+        # partial_d R
+        jacobi[thread_id, i] = \
+            (
+            rp.conjugate() * (
+                partial_Mp_r[i + 1, 0, 0] * 2 * cmath.pi * 1j * ni * cosi * sinhi + 
+                partial_Mp_r[i + 1, 0, 1] * 2 * cmath.pi * 1j * ni ** 2 * coshi +
+                partial_Mp_r[i + 1, 1, 0] * 2 * cmath.pi * 1j * cosi ** 2 * coshi +
+                partial_Mp_r[i + 1, 1, 1] * 2 * cmath.pi * 1j * ni * cosi * sinhi
+            )
+            + 
+            rs.conjugate() * (
+                partial_Ms_r[i + 1, 0, 0] * 2 * cmath.pi * 1j * ni * cosi * sinhi +
+                partial_Ms_r[i + 1, 0, 1] * 2 * cmath.pi * 1j * coshi +
+                partial_Ms_r[i + 1, 1, 0] * 2 * cmath.pi * 1j * cosi ** 2 * ni ** 2 * coshi +
+                partial_Ms_r[i + 1, 1, 1] * 2 * cmath.pi * 1j * ni * cosi * sinhi
+            )
+            ).real / wl / 2 # div by 2 to normalize the sum of 2 polarizations
+        
+        # partial_d T
+        jacobi[thread_id + wls_size, i] = \
+            (cos_sub / cos_inc * n_sub).real * \
+            (
+            tp.conjugate() * (
+                partial_Mp_t[i + 1, 0, 0] * 2 * cmath.pi * 1j * ni * cosi * sinhi + 
+                partial_Mp_t[i + 1, 0, 1] * 2 * cmath.pi * 1j * ni ** 2 * coshi +
+                partial_Mp_t[i + 1, 1, 0] * 2 * cmath.pi * 1j * cosi ** 2 * coshi +
+                partial_Mp_t[i + 1, 1, 1] * 2 * cmath.pi * 1j * ni * cosi * sinhi
+            )
+            + 
+            ts.conjugate() * (
+                partial_Ms_t[i + 1, 0, 0] * 2 * cmath.pi * 1j * ni * cosi * sinhi +
+                partial_Ms_t[i + 1, 0, 1] * 2 * cmath.pi * 1j * coshi +
+                partial_Ms_t[i + 1, 1, 0] * 2 * cmath.pi * 1j * cosi ** 2 * ni ** 2 * coshi +
+                partial_Ms_t[i + 1, 1, 1] * 2 * cmath.pi * 1j * ni * cosi * sinhi
+            )
+            ).real / wl / 2 # div by 2 to normalize the sum of 2 polarizations

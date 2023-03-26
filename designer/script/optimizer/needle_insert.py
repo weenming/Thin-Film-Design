@@ -1,79 +1,87 @@
+import sys
+sys.path.append('./designer/script')
+
 import numpy as np
-import film
+import copy
+
+from film import FilmSimple
+from spectrum import BaseSpectrum
+from LM_gradient_descent import stack_f, stack_J
 
 
-def inserted_layers(film1: film.Film, insert_layer_num, insert_position, insert_thickness=0.0000):
-    # insert_layer_num 是插入前，被插入的层的index
-    assert d[insert_layer_num] >= insert_position, 'insert position out of range of the inserted layer'
-    if materials[insert_layer_num] == 'SiO2_OIC':
-        insert_material = 'Nb2O5_OIC'
-        inserted_material = 'SiO2_OIC'
-    elif materials[insert_layer_num] == 'Nb2O5_OIC':
-        insert_material = 'SiO2_OIC'
-        inserted_material = 'Nb2O5_OIC'
-    elif materials[insert_layer_num] == 'SiO2':
-        insert_material = 'TiO2'
-        inserted_material = 'SiO2'
-    elif materials[insert_layer_num] == 'TiO2':
-        insert_material = 'SiO2'
-        inserted_material = 'TiO2'
-
-    i = insert_layer_num
-    materials_new = np.insert(materials, i, inserted_material)
-    materials_new = np.insert(materials_new, i + 1, insert_material)
-    d_new = np.insert(d, i, insert_position)
-    d_new[i + 1] -= insert_position
-    d_new = np.insert(d_new, i + 1, insert_thickness)
-    return d_new, materials_new
-
-
-def insert_1_layer(wls, target_spec, d, materials, insert_search_pts):
+def insert_1_layer(
+    film: FilmSimple, 
+    target_spec_ls: list[BaseSpectrum], 
+    insert_search_pts=10, 
+    insert_places: np.array=None
+):
     """
-    find the layer and position to insert the new layer
-    :param d:
-    :param materials:
-    :param insert_search_pts:
-    :return: inserted d, materials and the index of the inserted layer
+    find the layer and position to insert the new layer and update the film
+    NOTE: only applies to the no absorption scenario
+    
+    Parameters:
+        film
+        target_specs:
+        insert_search_pts:
+        insert_places
+    
+    Return: None
     """
-    print('start searching for insertion position')
-    insert_gradient = np.dot(
-        get_insert_jacobi.get_insert_jacobi_faster(
-            wls, d, materials, insert_search_pts, theta0=60.).T,
-        get_spectrum(wls, d, materials, theta0=60.) - target_spec)
-    d_insert = np.zeros(d.shape[0] * insert_search_pts)
-    # 画插入梯度图
-    # layer_number = d.shape[0]
-    # for i in range(d_insert.shape[0]):
-    #     d_insert[i] = d[0:int(i / insert_search_pts)].sum() + d[int(
-    #         i / insert_search_pts)] / insert_search_pts * (i % insert_search_pts)
-    #     i += 1
-    # plt.plot(d_insert, insert_gradient, label='insert gradient')
-    # plt.xlabel('d/nm')
-    # plt.legend()
-    # plt.title(f'insert gradient, layer num={layer_number}')
-    # plt.show()
-    # 找最小梯度的地方插入一层
-    insert_index = np.argmin(insert_gradient)
-    insert_layer_num = int(insert_index / insert_search_pts) + 1
-    inserted_layer_thickness = d[insert_layer_num - 1]
-    insert_position = (insert_index % insert_search_pts) * \
-        d[insert_layer_num - 1] / insert_search_pts
-    insert_thickness = 1e-3
-    # 这个layer_num是数组的index
-    # if materials[insert_layer_num - 1] == 'SiO2_OIC':
-    #     insert_material = 'Nb2O5_OIC'
-    #     inserted_material = 'SiO2_OIC'
-    # elif materials[insert_layer_num - 1] == 'Nb2O5_OIC':
-    #     insert_material = 'SiO2_OIC'
-    #     inserted_material = 'Nb2O5_OIC'
-    # d = np.insert(d, insert_layer_num - 1, insert_position)
-    # d = np.insert(d, insert_layer_num, insert_thickness)
-    # d[insert_layer_num + 1] = inserted_layer_thickness - insert_position
-    # materials = np.insert(materials, insert_layer_num - 1, inserted_material)
-    # materials = np.insert(materials, insert_layer_num, insert_material)
-    d, materials = inserted_layers(
-        d, materials, insert_layer_num - 1, insert_position, insert_thickness)
-    print(
-        f'new layer inserted at {insert_layer_num}th layer, {insert_position}nm')
 
-    return d, materials, insert_layer_num
+    if insert_places is not None:
+        assert False, 'not yet implemented :('
+    
+    insert_idx_arr = make_test_insert_film(film, insert_search_pts)
+
+    # stack parameters & preparations
+    d = film.get_d()
+    target_spec = np.array([])
+    n_arrs_ls = []
+    for s in target_spec_ls:
+        target_spec = np.append(target_spec, s.get_R())
+        # calculate refractive indices in advance and store
+
+        # In LM optimization this saves time but in needle
+        # insertion it does not. Only to stay close to the 
+        # implementation in LM descent for reusing code
+
+        n_arrs_ls.append([
+            film.calculate_n_array(s.WLS), 
+            film.calculate_n_sub(s.WLS), 
+            film.calculate_n_inc(s.WLS)])
+
+
+    # allocate space and calculate J and f
+    J = np.empty((target_spec.shape[0], d.shape[0]))
+    f = np.empty(target_spec.shape[0]) # only R spec: no absorption
+    stack_J(J, d, n_arrs_ls, target_spec_ls)
+    stack_f(f, d, n_arrs_ls, target_spec_ls, target_spec)
+
+    # find insertion place with largest negative gradient
+    grad = np.dot(J.T, f)
+    greedy_insert_idx = np.argmin(grad[insert_idx_arr])
+    greedy_insert_layer_idx = insert_idx_arr[greedy_insert_idx]
+
+    # remove test layers but keep the best layer (needle insertion)
+    film.remove_negative_thickness_layer(exclude=greedy_insert_layer_idx)
+    return 
+
+
+
+def make_test_insert_film(film, insert_search_pts):
+    '''
+    Add to every layer evenly insert_search_pts test insert layers,
+    as a trail film so that insertion grad at those places could be 
+    calculated
+
+    '''
+    insert_idx_arr = [j * 2 + i * (2 * insert_search_pts + 1) 
+                        for i in range(film.get_layer_number()) 
+                        for j in range(insert_search_pts)]
+    for i in range(film.get_layer_number()):
+        for j in range(insert_search_pts):
+            insert_position = j / insert_search_pts * film.get_d()[i]
+            # insert new layer: zero thickness
+            film.insert_layer(i, insert_position, 0) 
+
+    return insert_idx_arr

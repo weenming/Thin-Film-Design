@@ -1,56 +1,45 @@
 import numpy as np
 from gets.get_jacobi import get_jacobi_simple
 from gets.get_spectrum import get_spectrum_simple
-import time
-from film import FilmSimple
-from spectrum import SpectrumSimple
 
-def LM_optimize_d_simple(film: FilmSimple, target_specs: list[SpectrumSimple], h_tol, max_step):
+from film import FilmSimple
+from spectrum import BaseSpectrum
+
+def LM_optimize_d_simple(film: FilmSimple, target_spec_ls: list[BaseSpectrum], h_tol, max_step):
     """
     
     """
     layer_number = film.get_layer_number()
-    target_spec_ls = target_specs
     
-    # target spectrum: concatenate target spectrums to a single 1d array
-    target_spectrum = np.array([])
-    # other spectrum parameters are organized into a list by different inc_angs
-    wls_ls = []
-    wls_number = 0
-    inc_ang_ls = []
-    # refractive indices also needs preparation
-    n_layers_ls = []
-    n_sub_ls = []
-    n_inc_ls = []
-    
+    target_spec = np.array([])
+    n_arrs_ls = []
     for s in target_spec_ls:
-        # only reflectance spectrum
-        target_spectrum = np.append(target_spectrum, s.get_R())
-        wls_ls.append(s.WLS)
-        wls_number += s.WLS.shape[0]
-        inc_ang_ls.append(s.INC_ANG)
-        n_layers_ls.append(film.calculate_n_array(s.WLS))
-        n_sub_ls.append(film.calculate_n_sub(s.WLS))
-        n_inc_ls.append(film.calculate_n_inc(s.WLS))
+        target_spec = np.append(target_spec, s.get_R())
+        # calculate refractive indices in advance and store to save time
+        n_arrs_ls.append([
+            film.calculate_n_array(s.WLS), 
+            film.calculate_n_sub(s.WLS), 
+            film.calculate_n_inc(s.WLS)])
 
     # d: current d of designed film
     d = film.get_d()
 
-    # TODO: allocate memory for J and f
+    # allocate memory for J and f
+    J = np.empty((target_spec.shape[0], d.shape[0]))
+    f = np.empty(target_spec.shape[0]) # shape of reflectance spec: no absorption
+    f_new = np.empty(target_spec.shape[0]) # shape of reflectance spec: no absorption
 
     # before first iteration, calculate g and A
-    J = stack_J(J, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls)
-    f = stack_f(f, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls, 
-                target_spectrum)
+    stack_J(J, d, n_arrs_ls, target_spec_ls) # use address reference, no return value
+    stack_f(f, d, n_arrs_ls, target_spec_ls, target_spec)
     g = np.dot(J.T, f)
     A = np.dot(J.T, J)
     nu = 2
     mu = 1
 
     for step_count in range(max_step):
-        J = stack_J(J, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls)
-        f = stack_f(f, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, inc_ang_ls, 
-                    target_spectrum)
+        stack_J(J, d, n_arrs_ls, target_spec_ls)
+        stack_f(f, d, n_arrs_ls, target_spec_ls, target_spec)
         h = np.dot(np.linalg.inv(A + mu * np.identity(layer_number)), -g)
         d_new = d + h
         F_d = np.sum(np.square(f))
@@ -59,11 +48,10 @@ def LM_optimize_d_simple(film: FilmSimple, target_specs: list[SpectrumSimple], h
         # should not cause unexpected stopping because there should be other
         #  descending directions
         for i in range(d_new.shape[0]):
-            if d_new[i] < 0:
+            if d_new[i] < 0: # project back to feasible domain
                 d_new[i] = 0
 
-        f_new = stack_f(f_new, wls_ls, d_new, n_layers_ls, n_sub_ls, n_inc_ls, 
-                        inc_ang_ls, target_spectrum)
+        stack_f(f_new, d_new, n_arrs_ls, target_spec_ls, target_spec)
         F_dnew = np.sum(np.square(f_new))
         rho = (F_d - F_dnew) / np.dot(h.T, mu * h - g).item()
 
@@ -97,8 +85,13 @@ def LM_optimize_d_simple(film: FilmSimple, target_specs: list[SpectrumSimple], h
 
 
 
-def stack_f(f_old, wls_num, layer_num, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, 
-            inc_ang_ls, target_spec):
+def stack_f(
+    f_old, 
+    d, 
+    n_arrs_ls: list[list[np.array]], 
+    target_spec_ls: list[BaseSpectrum], 
+    target_spec
+):
     """
     target specs may have to be calculated using different params
 
@@ -114,41 +107,45 @@ def stack_f(f_old, wls_num, layer_num, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_l
             layer number
     """
     i = 0
-    for wls, inc_ang in zip(wls_ls, inc_ang_ls):
-        this_wls_num = wls.shape[0]
+    for s, n_arrs in zip(target_spec_ls, n_arrs_ls):
+        wls_num = s.WLS.shape[0]
         # note that numpy array slicing does not allocate new space in memory
         get_spectrum_simple(
-            f_old[i: i + this_wls_num],
-            wls,
+            f_old[i: i + wls_num],
+            s.WLS,
             d,
-            n_layers_ls[-1],
-            n_sub_ls[-1], 
-            n_inc_ls[-1], 
-            inc_ang[-1]
-        )[:wls.shape[0], :] # get only half of the spectrum
-        i += this_wls_num
+            n_arrs[0],
+            n_arrs[1],
+            n_arrs[2],
+            s.INC_ANG
+        )[:wls_num, :] # get only half of the spectrum
+        i += wls_num
     
     f_old = f_old - target_spec
     return
 
-def stack_J(J_old, wls_num, layer_num, wls_ls, d, n_layers_ls, n_sub_ls, n_inc_ls, 
-            inc_ang_ls):
+def stack_J(
+    J_old, 
+    n_arrs_ls, 
+    d, 
+    target_spec_ls: list[BaseSpectrum]
+):
     """
     target specs may have to be calculated using different params
     """
     i = 0
-    for wls, inc_ang in zip(wls_ls, inc_ang_ls):
-        this_wls_num = wls.shape[0]
+    for s, n_arrs in zip(target_spec_ls, n_arrs_ls):
+        this_wls_num = s.WLS.shape[0]
         # only reflectance
         get_jacobi_simple(
             J_old[i: i + this_wls_num, :],
-            wls, 
+            s.WLS, 
             d,
-            n_layers_ls[-1],
-            n_sub_ls[-1], 
-            n_inc_ls[-1], 
-            inc_ang[-1]
-        )[:wls.shape[0], :]
+            n_arrs[0],
+            n_arrs[1], 
+            n_arrs[2], 
+            s.INC_ANG
+        )[:s.WLS.shape[0], :]
         i += this_wls_num
     return
 

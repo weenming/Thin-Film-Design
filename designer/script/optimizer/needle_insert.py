@@ -1,12 +1,12 @@
 import sys
-sys.path.append('./designer/script')
+sys.path.append('./designer/script/')
 
 import numpy as np
 import copy
 
 from film import FilmSimple
 from spectrum import BaseSpectrum
-from LM_gradient_descent import stack_f, stack_J
+from optimizer.LM_gradient_descent import stack_f, stack_J
 
 
 def insert_1_layer(
@@ -78,10 +78,12 @@ def make_test_insert_film(film, insert_search_pts):
     insert_idx_arr = [j * 2 + i * (2 * insert_search_pts + 1) 
                         for i in range(film.get_layer_number()) 
                         for j in range(insert_search_pts)]
+    d_before = film.get_d().copy()
     for i in range(film.get_layer_number()):
+        
         for j in range(insert_search_pts):
-            insert_position = j / insert_search_pts * film.get_d()[i]
+            insert_position = 1 / insert_search_pts * d_before[i]
             # insert new layer: zero thickness
-            film.insert_layer(i, insert_position, 0) 
+            film.insert_layer(j * 2 + i * (2 * insert_search_pts + 1), insert_position, 0) 
 
     return insert_idx_arr

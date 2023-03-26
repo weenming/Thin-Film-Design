@@ -41,7 +41,7 @@ class Spectrum(BaseSpectrum):
         else:
             spec_T = spec_T
 
-        super.__init__(incident_angle, wavelengths, spec_R, spec_T)
+        super().__init__(incident_angle, wavelengths, spec_R, spec_T)
     
 
 class SpectrumSimple(BaseSpectrum):

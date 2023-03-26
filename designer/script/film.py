@@ -119,21 +119,23 @@ class FilmSimple(Film):
     def check_thickness(self):
         assert np.min(self.d) > 0, "layers of zero thickness!"
 
-    def remove_negative_thickness_layer(d, exclude=np.array([])):
+    def remove_negative_thickness_layer(self, exclude=np.array([])):
         indices = []
-        
+        d = self.get_d()
         # first layer is never removed
         i = 1
         while i < d.shape[0] - 1:
             if d[i] <= 0 and i not in exclude:
                 d[i - 1] += d[i + 1]
                 d = np.delete(d, [i, i + 1])
+            else:
+                i += 1
 
         if d[-1] <= 0:
             d = np.delete(d, -1)
 
         d = np.delete(d, indices)
-
+        self.update_d(d)
 
     # Helper functions of insertion
     def insert_layer(self, layer_index, position, thickness):
@@ -147,9 +149,9 @@ class FilmSimple(Film):
                        ^ (i == layer_index + 2)
         """
         d = self.get_d()
+        assert 0 <= layer_index < d.shape[0], 'invalid insert layer'
         assert d[layer_index] >= position and position >= 0, \
             'invalid insert position'
-        assert layer_index < d.shape[0], 'invalid insert layer'
 
         d = np.insert(d, [layer_index + 1, layer_index + 1], thickness)
         d[layer_index + 2] = d[layer_index] - position

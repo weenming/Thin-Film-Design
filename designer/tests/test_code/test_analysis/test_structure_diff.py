@@ -1,8 +1,9 @@
 import unittest
 import numpy as np
 import sys
-sys.path.append("./designer/script")
-import utils.structure as s
+sys.path.append("./working/")
+sys.path.append('designer/script')
+import analyze_utils.structure as s
 
 
 class TestFilm(unittest.TestCase):

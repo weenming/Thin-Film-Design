@@ -12,10 +12,10 @@ class Design:
         self, 
         target_specs: list[SpectrumSimple],
         init_film: FilmSimple, 
-        film: FilmSimple
+        film: FilmSimple= None
     ):
         self.init_film = copy.deepcopy(init_film) # save in case of aliasing
-        self.film = film
+        self.film = film if film is not None else init_film
         self.target_specs = target_specs
         self.loss = None  # Diff of the spec between designed film and target
 
@@ -110,5 +110,5 @@ class DesignSimple(Design):
 
 
 class DesignForSpecSimple(Design):
-    def __init__(self, target_spec: SpectrumSimple, init_film: FilmSimple, film: FilmSimple):
+    def __init__(self, target_spec: SpectrumSimple, init_film: FilmSimple, film: FilmSimple=None):
         super().__init__([target_spec], init_film, film)

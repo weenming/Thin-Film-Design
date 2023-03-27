@@ -122,5 +122,7 @@ def plot_time_GPU():
 
     plt.show()
 
+#TODO: optimize grid size w.r.t. wavelength size
+
 if __name__ == "__main__":
     plot_time_GPU()

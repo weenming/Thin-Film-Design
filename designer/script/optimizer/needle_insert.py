@@ -33,9 +33,11 @@ def insert_1_layer(
     if insert_places is not None:
         assert False, 'not yet implemented :('
     
-    insert_search_pts = int(MAX_LAYER / (film.get_layer_number() * 2 + 1))
+    insert_search_pts = (MAX_LAYER // film.get_layer_number() - 1) // 2
+    # check
     if insert_search_pts <= 0:
-        return False # unable to insert due to GPU limitation
+        print('Cannot insert due to GPU limitation')
+        return False 
     
     insert_idx_arr = make_test_insert_film(film, insert_search_pts)
 
@@ -43,9 +45,20 @@ def insert_1_layer(
     
     greedy_insert_idx = np.argmin(grad[insert_idx_arr])
     greedy_insert_layer_idx = insert_idx_arr[greedy_insert_idx]
-
+    # check
+    if grad[greedy_insert_layer_idx] >= 0:
+        print(f'WARNING: positive grad everywhere, min grad:', \
+               f'{np.min(grad[greedy_insert_layer_idx])}')
+    elif grad[greedy_insert_layer_idx] > -1e-5:
+        print(f'WARNING: insert gradient close to zero, min grad:', \
+              f'{np.min(grad[greedy_insert_layer_idx])}')
+    elif greedy_insert_idx % insert_search_pts in [0, 1]:
+        print('WARNING: inserted layer is on the edge of a layer', \
+              'which may indicate the termination of needle optimization')
+    else:
+        print(f'insert gradient: {np.min(grad[greedy_insert_layer_idx])}')
     # remove test layers but keep the best layer (needle insertion)
-    film.remove_negative_thickness_layer(exclude=greedy_insert_layer_idx)
+    film.remove_negative_thickness_layer(exclude=[greedy_insert_layer_idx])
     return True
 
 
@@ -90,7 +103,7 @@ def make_test_insert_film(film, insert_search_pts):
     '''
     # ensure not exceed cuda restrictions
     # which is MAX_LAYER layers (inserted) or layer * insert_pts * 2 < MAX_LAYER
-    assert film.get_layer_number() * (insert_search_pts * 2 + 1) < MAX_LAYER, \
+    assert film.get_layer_number() * (insert_search_pts * 2 + 1) <= MAX_LAYER, \
         'too many search points.'
     insert_idx_arr = [j * 2 + i * (2 * insert_search_pts + 1) + 1
                         for i in range(film.get_layer_number()) 

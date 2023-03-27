@@ -14,14 +14,14 @@ class BaseSpectrum:
         try:
             return self.spec_R
         except AttributeError:
-            raise ValueError('spec R not yet calculated')
+            raise ValueError('spec R not initialized')
 
     
     def get_T(self):
         try:
             return self.spec_T
         except AttributeError:
-            raise ValueError('spec R not yet calculated')
+            raise ValueError('spec R not initialized')
 
 class Spectrum(BaseSpectrum):
     """
@@ -75,13 +75,16 @@ class SpectrumSimple(BaseSpectrum):
 
     def calculate(self):
         # only R spectrum
-        get_spectrum.get_spectrum_simple(self.spec, self.WLS,
-                                                self.film.d,
-                                                self.n,
-                                                self.n_sub,
-                                                self.n_inc,
-                                                self.INC_ANG
-                                                )
+        get_spectrum.get_spectrum_simple(
+            self.spec, 
+            self.WLS,
+            self.film.d,
+            self.n,
+            self.n_sub,
+            self.n_inc,
+            self.INC_ANG
+                                    
+        )
         self.spec_R = self.spec[:self.WLS.shape[0]]
         self.spec_T = self.spec[self.WLS.shape[0]:]
         self.updated = True
@@ -91,3 +94,18 @@ class SpectrumSimple(BaseSpectrum):
 
     def is_updated(self):
         return self.updated
+    
+    def get_R(self):
+        if self.updated:
+            return self.spec_R
+        else:
+            self.calculate()
+            return self.spec_R
+
+    
+    def get_T(self):
+        if self.updated:
+            return self.spec_T
+        else:
+            self.calculate()
+            return self.spec_T

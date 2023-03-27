@@ -6,7 +6,13 @@ from film import FilmSimple
 from spectrum import BaseSpectrum
 
 
-def LM_optimize_d_simple(film: FilmSimple, target_spec_ls: list[BaseSpectrum], h_tol, max_step):
+def LM_optimize_d_simple(
+        film: FilmSimple, 
+        target_spec_ls: list[BaseSpectrum], 
+        h_tol, 
+        max_step, 
+        show=False
+):
     """
     
     """
@@ -23,15 +29,15 @@ def LM_optimize_d_simple(film: FilmSimple, target_spec_ls: list[BaseSpectrum], h
             film.calculate_n_array(s.WLS), 
             film.calculate_n_sub(s.WLS), 
             film.calculate_n_inc(s.WLS)])
-
+    d = film.get_d()
+    
     # allocate memory for J and f
     J = np.empty((target_spec.shape[0], d.shape[0]))
     f = np.empty(target_spec.shape[0])
     f_new = np.empty(target_spec.shape[0])
 
     # Initialize for LM: before first iteration, calculate g and A
-    d = film.get_d()
-    stack_J(J, n_arrs_ls, d, target_spec_ls) # use address reference, so no return value
+    stack_J(J, n_arrs_ls, d, target_spec_ls) # adr ref, no ret val
     stack_f(f, n_arrs_ls, d, target_spec_ls, target_spec)
     g = np.dot(J.T, f)
     A = np.dot(J.T, J)
@@ -45,11 +51,11 @@ def LM_optimize_d_simple(film: FilmSimple, target_spec_ls: list[BaseSpectrum], h
         d_new = d + h
         F_d = np.sum(np.square(f))
         
-        # Strategy: do not allow negative thickness.
+        # Strategy: project back to feasible domain: d_i > 0
         # should not cause unexpected stopping because there should be other
-        #  descending directions
+        # descending directions
         for i in range(d_new.shape[0]):
-            if d_new[i] < 0: # project back to feasible domain
+            if d_new[i] < 0:
                 d_new[i] = 0
 
         stack_f(f_new, n_arrs_ls, d_new, target_spec_ls, target_spec)
@@ -79,11 +85,16 @@ def LM_optimize_d_simple(film: FilmSimple, target_spec_ls: list[BaseSpectrum], h
             nu = 2 * nu
         if np.max(np.abs(h)).item() < h_tol:
             break
-
-        print(f'loss: {np.sqrt(F_d / f.shape[0])}')
+        
+        if show:
+            loss = np.sqrt(F_d / f.shape[0])
+            print(f'loss: {loss}')
 
     film.update_d(d)
     film.remove_negative_thickness_layer()
+    if film.get_layer_number() == 0:
+        raise Exception('Design terminated: zero layers')
+    return step_count
 
 
 
@@ -124,7 +135,7 @@ def stack_f(
         )
         i += wls_num
     
-    f_old = f_old - target_spec
+    f_old[:] = f_old - target_spec # should not create new arr.
     return
 
 def stack_J(

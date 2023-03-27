@@ -54,22 +54,30 @@ class Design:
         error = 1e-5
         max_step = 1000
 
-        for i in epoch:
+        for i in range(epoch):
             # LM gradient descent
-            d_new, merit_new = gd.LM_optimize_d_simple(
+            step_count = gd.LM_optimize_d_simple(
                 self.film,
                 self.target_specs,
                 error,
                 max_step
             )
-
+            print(f'{i}-th iteration, loss: {self.calculate_loss()}, {step_count} gd steps')
+            
             # Needle insertion
-            insert.needle_insertion(
+            inserted = insert.insert_1_layer(
                 self.film,
                 self.target_specs,
             )
+            
+            if not inserted:
+                print(f'{i}-th iteration, cannot insert.')
+                return
+            else:
+                print(f'{i}-th iteration, new layer inserted. now ' +\
+                      f'{self.film.get_layer_number()} layers')
 
-    
+            print(self.film.get_d())
 
 class DesignSimple(Design):
     """
@@ -110,5 +118,6 @@ class DesignSimple(Design):
 
 
 class DesignForSpecSimple(Design):
+    '''One incidence angle, no absorption (thus only R spec)'''
     def __init__(self, target_spec: SpectrumSimple, init_film: FilmSimple, film: FilmSimple=None):
         super().__init__([target_spec], init_film, film)

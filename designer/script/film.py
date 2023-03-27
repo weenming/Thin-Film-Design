@@ -58,6 +58,7 @@ class FilmSimple(Film):
 
         assert len(d_init.shape) == 1, "Should be 1 dim array!"
         assert d_init.shape[0] < 250, "Too many layers!"
+    
         self.d = d_init
         
         self.spectrum = []
@@ -92,8 +93,7 @@ class FilmSimple(Film):
         if len(self.spectrum) == 1:
             # when only one spectrum, return the only one spectrum
             return self.spectrum[0]
-        elif len(self.spectrum) == 0:
-            raise ValueError("Uninitialized spectrum!")
+
         else:
             if inc_ang is None or wls is None:
                 raise ValueError(
@@ -103,7 +103,7 @@ class FilmSimple(Film):
                 if np.array_equal(s.WLS, wls) and s.INC_ANG == inc_ang:
                     return s
             # Not found, add to get_spec
-            print("WARNING: spec not in this film's spec list. New spec added to film!")
+            # print("WARNING: spec not in this film's spec list. New spec added to film!")
             return self.add_spec_param(inc_ang, wls)
 
 
@@ -119,7 +119,7 @@ class FilmSimple(Film):
     def check_thickness(self):
         assert np.min(self.d) > 0, "layers of zero thickness!"
 
-    def remove_negative_thickness_layer(self, exclude=np.array([])):
+    def remove_negative_thickness_layer(self, exclude=[]):
         indices = []
         d = self.get_d()
         # first layer is never removed
@@ -128,13 +128,13 @@ class FilmSimple(Film):
             if d[i] <= 0 and i not in exclude:
                 d[i - 1] += d[i + 1]
                 d = np.delete(d, [i, i + 1])
+                exclude = [x - 2 for x in exclude]
             else:
                 i += 1
 
-        if d[-1] <= 0:
+        if d[-1] <= 0 and d.shape[0] not in exclude:
             d = np.delete(d, -1)
 
-        d = np.delete(d, indices)
         self.update_d(d)
 
     # Helper functions of insertion

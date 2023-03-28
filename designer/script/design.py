@@ -45,7 +45,7 @@ class Design:
         return self.film.get_d().sum()
 
         
-    def TFNN_train(self, epoch, record=False, error=1e-5, max_step=1000):
+    def TFNN_train(self, needle_epoch, record=False, error=1e-5, max_step=1000):
         """
         Combination of needle insertion and gradient descent
 
@@ -58,7 +58,7 @@ class Design:
         # error = 1e-5
         # max_step = 1000
 
-        for i in range(epoch):
+        for i in range(needle_epoch):
             # LM gradient descent
             step_count = gd.LM_optimize_d_simple(
                 self.film,

@@ -11,7 +11,8 @@ def LM_optimize_d_simple(
         target_spec_ls: list[BaseSpectrum], 
         h_tol, 
         max_step, 
-        show=False
+        show=False, 
+        record = False
 ):
     """
     
@@ -35,6 +36,8 @@ def LM_optimize_d_simple(
     J = np.empty((target_spec.shape[0], d.shape[0]))
     f = np.empty(target_spec.shape[0])
     f_new = np.empty(target_spec.shape[0])
+
+    losses = []
 
     # Initialize for LM: before first iteration, calculate g and A
     stack_J(J, n_arrs_ls, d, target_spec_ls) # adr ref, no ret val
@@ -90,11 +93,16 @@ def LM_optimize_d_simple(
         if show:
             loss = np.sqrt(F_d / f.shape[0])
             print(f'loss: {loss}')
+        if record:
+            loss = np.sqrt(F_d / f.shape[0])
+            losses.append(loss)
 
     film.update_d(d)
     film.remove_negative_thickness_layer()
     if film.get_layer_number() == 0:
         raise Exception('Design terminated: zero layers')
+    if record:
+        return step_count, losses
     return step_count
 
 

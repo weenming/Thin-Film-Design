@@ -90,7 +90,7 @@ class FilmSimple(Film):
     def get_spec(self, inc_ang=None, wls=None) -> spectrum.SpectrumSimple:
         """ return spectrum with specified wls and inc_ang
         """
-        if len(self.spectrum) == 1:
+        if len(self.spectrum) == 1 and inc_ang is None and wls is None:
             # when only one spectrum, return the only one spectrum
             return self.spectrum[0]
 

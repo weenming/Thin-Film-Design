@@ -45,17 +45,18 @@ class Design:
         return self.film.get_d().sum()
 
         
-    def TFNN_train(self, epoch, record=False):
+    def TFNN_train(self, epoch, record=False, error=1e-5, max_step=1000):
         """
         Combination of needle insertion and gradient descent
 
-        TODO: "record" functionality to study early-stopping in a single training
+        "record" functionality to investigate training process
+        but record may decrease performance
         """
         # preparing
 
         # hyperparameter: exit condition of gd
-        error = 1e-5
-        max_step = 1000
+        # error = 1e-5
+        # max_step = 1000
 
         for i in range(epoch):
             # LM gradient descent
@@ -68,7 +69,7 @@ class Design:
             print(f'{i}-th iteration, loss: {self.calculate_loss()}, {step_count} gd steps')
             
             # Needle insertion
-            inserted, gd = insert.insert_1_layer(
+            inserted, insert_grad = insert.insert_1_layer(
                 self.film,
                 self.target_specs,
             )
@@ -79,13 +80,13 @@ class Design:
             else:
                 print(f'{i}-th iteration, new layer inserted. now ' +\
                       f'{self.film.get_layer_number()} layers')
-
-            self.training_info.append({
-                'loss': self.calculate_loss(),
-                'film': copy.deepcopy(self.film),
-                'step': step_count, # gd steps in this needle iteration
-                'insert_gd': gd
-            })
+            if record:
+                self.training_info.append({
+                    'loss': self.calculate_loss(),
+                    'film': copy.deepcopy(self.film),
+                    'step': step_count, # gd steps in this needle iteration
+                    'insert_gd': insert_grad
+                })
 
 class DesignSimple(Design):
     """

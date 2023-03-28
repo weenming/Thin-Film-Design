@@ -45,8 +45,7 @@ def LM_optimize_d_simple(
     mu = 1
 
     for step_count in range(max_step):
-        stack_J(J, n_arrs_ls, d, target_spec_ls)
-        stack_f(f, n_arrs_ls, d, target_spec_ls, target_spec)
+
         h = np.dot(np.linalg.inv(A + mu * np.identity(d.shape[0])), -g)
         d_new = d + h
         F_d = np.sum(np.square(f))
@@ -75,6 +74,8 @@ def LM_optimize_d_simple(
             # After the "swap", f_new now points to the location of where f was. 
             # It does not matter that f_new now has dirty data becaus f_new will
             # be updated before next time F_new is calculated based on it.
+            stack_J(J, n_arrs_ls, d, target_spec_ls)
+            stack_f(f, n_arrs_ls, d, target_spec_ls, target_spec)
             g = np.dot(J.T, f)
             A = np.dot(J.T, J)
             mu = mu * \

@@ -37,7 +37,7 @@ def insert_1_layer(
     # check
     if insert_search_pts <= 0:
         print('Cannot insert due to GPU limitation')
-        return False 
+        return False, None
     
     insert_idx_arr = make_test_insert_film(film, insert_search_pts)
 
@@ -48,18 +48,17 @@ def insert_1_layer(
     # check
     if grad[greedy_insert_layer_idx] >= 0:
         print(f'WARNING: positive grad everywhere, min grad:', \
-               f'{np.min(grad[greedy_insert_layer_idx])}')
+               f'{grad[greedy_insert_layer_idx]}')
     elif grad[greedy_insert_layer_idx] > -1e-5:
         print(f'WARNING: insert gradient close to zero, min grad:', \
-              f'{np.min(grad[greedy_insert_layer_idx])}')
+              f'{grad[greedy_insert_layer_idx]}')
     elif greedy_insert_idx % insert_search_pts in [0, 1]:
         print('WARNING: inserted layer is on the edge of a layer', \
               'which may indicate the termination of needle optimization')
-    else:
-        print(f'insert gradient: {np.min(grad[greedy_insert_layer_idx])}')
+
     # remove test layers but keep the best layer (needle insertion)
     film.remove_negative_thickness_layer(exclude=[greedy_insert_layer_idx])
-    return True
+    return True, grad[greedy_insert_layer_idx]
 
 
 
@@ -79,32 +78,63 @@ def get_insert_grad(film: FilmSimple, target_spec_ls):
         n_arrs_ls.append([
             film.calculate_n_array(s.WLS), 
             film.calculate_n_sub(s.WLS), 
-            film.calculate_n_inc(s.WLS)])
+            film.calculate_n_inc(s.WLS)
+        ])
         
     # allocate space and calculate J and f
     d = film.get_d()
     J = np.empty((target_spec.shape[0], d.shape[0]))
     f = np.empty(target_spec.shape[0]) # only R spec: no absorption
-    stack_J(J, n_arrs_ls, d, target_spec_ls, get_J=get_insert_jacobi_simple)
-    stack_f(f, n_arrs_ls, d, target_spec_ls, target_spec)
+    # TODO: split d to allow more insertion layers
+    for i in range(d.shape[0] // MAX_LAYER):
+        stack_J(
+            J, 
+            [[x[:, i: i + MAX_LAYER]] for y in n_arrs_ls for x in y], # i know it is shit :( 
+            d[i: i + MAX_LAYER], 
+            target_spec_ls, 
+            get_J=get_insert_jacobi_simple
+        )
+        stack_f(
+            f, 
+            [[x[:, i: i + MAX_LAYER]] for y in n_arrs_ls for x in y], 
+            d[i + MAX_LAYER], 
+            target_spec_ls, 
+            target_spec[i: i + MAX_LAYER]
+        )
 
+    stack_J(
+        J, 
+        [[x[:, i: -1]] for y in n_arrs_ls for x in y], # i know it is shit :( 
+        d[i: -1], 
+        target_spec_ls, 
+        get_J=get_insert_jacobi_simple
+    )
+    stack_f(
+        f, 
+        [[x[:, i: -1]] for y in n_arrs_ls for x in y], 
+        d[i + MAX_LAYER], 
+        target_spec_ls, 
+        target_spec[i: -1]
+    )
     # find insertion place with largest negative gradient
     grad = np.dot(J.T, f)
     return grad
 
 
 
-def make_test_insert_film(film, insert_search_pts):
+def make_test_insert_film(film, insert_search_pts, split=False):
     '''
     Add to every layer evenly insert_search_pts test insert layers,
     as a trail film so that insertion grad at those places could be 
     calculated
 
     '''
-    # ensure not exceed cuda restrictions
-    # which is MAX_LAYER layers (inserted) or layer * insert_pts * 2 < MAX_LAYER
-    assert film.get_layer_number() * (insert_search_pts * 2 + 1) <= MAX_LAYER, \
-        'too many search points.'
+    if split is False:
+        # ensure not exceed cuda restrictions
+        # which is MAX_LAYER layers (inserted) or layer * insert_pts * 2 < MAX_LAYER
+        assert film.get_layer_number() * (insert_search_pts * 2 + 1) <= MAX_LAYER, \
+            'too many search points.'
+        
     insert_idx_arr = [j * 2 + i * (2 * insert_search_pts + 1) + 1
                         for i in range(film.get_layer_number()) 
                         for j in range(insert_search_pts)] # max: L(2N + 1) - 2

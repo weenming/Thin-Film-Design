@@ -2,6 +2,7 @@ import numpy as np
 
 from film import FilmSimple
 import matplotlib.pyplot as plt
+from design import Design
 
 
 # TODO: optimize metric: calculate structure in smaller or larger thickness?
@@ -189,3 +190,35 @@ def plot_layer_thickness(film: FilmSimple):
     ax.set_title(f'refractive index distribution at {spec.WLS[spec.WLS.shape[0] // 2]: .0f} nm')
     fig.set_size_inches(6, 1)
     return ax, fig
+
+
+def show_design_process(design: Design):
+    spec = design.film.get_spec()
+    n_A = spec.n[spec.WLS.shape[0] // 2, 0]
+    n_B = spec.n[spec.WLS.shape[0] // 2, 1]
+    n_sub = spec.n_sub[spec.WLS.shape[0] // 2]
+    n_arr = [n_A, n_B]
+
+    resolution = 500
+    arr = np.zeros((resolution, len(design.training_films)), dtype='complex128') + n_sub
+    
+    try:
+        l_per_pix = design.get_target_gt() * 2 / arr.shape[0]
+    except Exception as e: # not design for target.
+        l_per_pix = design.get_current_gt() / arr.shape[0]
+
+    iter = 0
+    for film in design.training_films:
+        d = film.get_d()
+
+        for pix in range(arr.shape[0]):
+            for i in range(d.shape[0]):
+                if d[:i + 1].sum() > pix * l_per_pix:
+                    arr[pix, iter] = n_arr[i % 2]
+                    break
+        iter += 1
+    
+    fig, ax = plt.subplots(1, 1)
+    s = ax.imshow(arr.real, aspect='auto', cmap='coolwarm', interpolation='none', vmin=1.4, vmax=2.6)
+    fig.colorbar(s)     
+    return arr

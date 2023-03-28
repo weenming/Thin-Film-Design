@@ -18,6 +18,9 @@ class Design:
         self.film = film if film is not None else init_film
         self.target_specs = target_specs
         self.loss = None  # Diff of the spec between designed film and target
+        self.training_films: list[FilmSimple] = [] # should use training_info
+        self.training_info: \
+            list[dict['loss': float, 'step': int, 'insert_gd': float, 'film': FilmSimple]] = []
 
     def calculate_loss(self) -> float:
         """
@@ -65,7 +68,7 @@ class Design:
             print(f'{i}-th iteration, loss: {self.calculate_loss()}, {step_count} gd steps')
             
             # Needle insertion
-            inserted = insert.insert_1_layer(
+            inserted, gd = insert.insert_1_layer(
                 self.film,
                 self.target_specs,
             )
@@ -77,7 +80,12 @@ class Design:
                 print(f'{i}-th iteration, new layer inserted. now ' +\
                       f'{self.film.get_layer_number()} layers')
 
-            print(self.film.get_d())
+            self.training_info.append({
+                'loss': self.calculate_loss(),
+                'film': copy.deepcopy(self.film),
+                'step': step_count, # gd steps in this needle iteration
+                'insert_gd': gd
+            })
 
 class DesignSimple(Design):
     """

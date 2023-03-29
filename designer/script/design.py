@@ -87,6 +87,7 @@ class Design:
                     'step': step_count, # gd steps in this needle iteration
                     'insert_gd': insert_grad
                 })
+                print(f'{i}-th iteration recorded')
 
 class DesignSimple(Design):
     """

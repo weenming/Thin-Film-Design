@@ -11,7 +11,7 @@ def adam_optimize(
         film: FilmSimple,
         target_spec_ls: list[BaseSpectrum], 
         max_steps, 
-        alpha=0.001, # stepsize
+        alpha=0.001, # stepsize TODO: fine tune this...
         beta1 = 0.9, 
         beta2 = 0.999, 
         epsilon = 1e-8, 

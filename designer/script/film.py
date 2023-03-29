@@ -1,6 +1,9 @@
 import numpy as np
+import copy
 import gets.get_n as get_n
 import spectrum
+from utils.substitutue import \
+    optimal_and_thin_film_approx_substitution_onestep_new, equal_optical_thickness
 
 
 class Film:
@@ -253,4 +256,13 @@ class FilmSimple(Film):
         return ot
 
 
+    def remove_thin_layers(self, d_min, method):
+        if method == 'eq ot':
+            method = equal_optical_thickness
+        elif method == 'optim':
+            method = optimal_and_thin_film_approx_substitution_onestep_new
+
+        f_sub = copy.deepcopy(self)
+        method(f_sub, d_min)
+        return f_sub
 

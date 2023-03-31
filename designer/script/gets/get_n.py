@@ -1,5 +1,6 @@
 from numpy import *
 import numpy as np
+import scipy
 
 
 

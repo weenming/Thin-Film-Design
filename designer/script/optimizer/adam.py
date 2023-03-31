@@ -15,7 +15,8 @@ def adam_optimize(
         beta1 = 0.9, 
         beta2 = 0.999, 
         epsilon = 1e-8, 
-        record = False
+        record = False, 
+        show=False
     ):
     # Adapted from Kingma, Diederik P. and Jimmy Ba. 
     # "Adam: A Method for Stochastic Optimization." CoRR abs/1412.6980 (2014)
@@ -58,11 +59,24 @@ def adam_optimize(
         d[d < 0] = 0.
 
         if record:
-            film.update_d(d)
             losses.append(calculate_RMS_f_spec(film, target_spec_ls))
-    
+        if show:
+            print(f'iter {t}, loss {calculate_RMS_f_spec(film, target_spec_ls)}')
+        film.update_d(d)    
+
+        # if loss not decreasing, break
+        try:
+            if losses[-1] == losses[-2]:
+                
+                    if np.array_equal(losses[-10:], [losses[-1]] * 10):
+                        print('convergent, terminate eraly')
+                        break
+        except Exception as e:
+            continue
+
     if record:
         return losses
-    return losses
+
+    return None
 
 

@@ -12,6 +12,8 @@ def get_spectrum_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
 
     It launches a CUDA kernel function after copying essential data to the GPU.
 
+    Note that memory consumption of forward propagation does not scale with layer. 
+
     Arguments:
         spectrum (1d np.array):
             2 * wls.shape[0], type: float64

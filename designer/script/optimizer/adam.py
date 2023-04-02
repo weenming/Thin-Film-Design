@@ -1,11 +1,13 @@
 import numpy as np
 import sys
 sys.path.append('./designer/script/')
-from optimizer.LM_gradient_descent import stack_f, stack_J
 
 from film import FilmSimple
 from spectrum import BaseSpectrum
 from utils.loss import calculate_RMS_f_spec
+
+from grad_helper import stack_f, stack_J
+
 
 def adam_optimize(
         film: FilmSimple,

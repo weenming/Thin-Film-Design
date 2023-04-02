@@ -109,10 +109,3 @@ def stack_J(
     return
 
 
-
-    '''
-            [[
-            y[0][:, i * M: (i + 1) * M], 
-            y[1][i * M: (i + 1) * M], 
-            y[2][i * M: (i + 1) * M]
-        ] for y in n_arrs_ls], # i know it is shit :( '''

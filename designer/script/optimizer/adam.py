@@ -6,7 +6,7 @@ from film import FilmSimple
 from spectrum import BaseSpectrum
 from utils.loss import calculate_RMS_f_spec
 
-from grad_helper import stack_f, stack_J
+from optimizer.grad_helper import stack_f, stack_J, stack_init_params
 
 
 def adam_optimize(
@@ -24,17 +24,7 @@ def adam_optimize(
     # "Adam: A Method for Stochastic Optimization." CoRR abs/1412.6980 (2014)
 
     # Prep: calculate refractive index & stack target spectrum into one array
-    target_spec = np.array([])
-    n_arrs_ls = []
-    for s in target_spec_ls:
-        # both R and T are calculated
-        target_spec = np.append(target_spec, s.get_R())
-        target_spec = np.append(target_spec, s.get_T())
-        # calculate refractive indices in advance and store to save time
-        n_arrs_ls.append([
-            film.calculate_n_array(s.WLS), 
-            film.calculate_n_sub(s.WLS), 
-            film.calculate_n_inc(s.WLS)])
+    target_spec, n_arrs_ls = stack_init_params(film, target_spec_ls)
     d = film.get_d()
     J = np.empty((target_spec.shape[0], d.shape[0]))
     f = np.empty(target_spec.shape[0])
@@ -46,7 +36,7 @@ def adam_optimize(
     v = 0
     
     for t in range(max_steps):
-        stack_J(J, n_arrs_ls, d, target_spec_ls)
+        stack_J(J, n_arrs_ls, d, target_spec_ls, MAX_LAYER_NUMBER=250)
         stack_f(f, n_arrs_ls, d, target_spec_ls, target_spec)
 
         g = J.T @ f
@@ -69,10 +59,9 @@ def adam_optimize(
         # if loss not decreasing, break
         try:
             if losses[-1] == losses[-2]:
-                
-                    if np.array_equal(losses[-10:], [losses[-1]] * 10):
-                        print('convergent, terminate eraly')
-                        break
+                if np.array_equal(losses[-10:], [losses[-1]] * 10):
+                    print('convergent, terminate eraly')
+                    break
         except Exception as e:
             continue
 

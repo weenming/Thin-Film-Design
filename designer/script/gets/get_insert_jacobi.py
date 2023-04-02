@@ -6,7 +6,16 @@ from gets.mat_lib import tsp # transpose
 
 
 
-def get_insert_jacobi_simple(jacobi, wls, d, n_layers, n_sub, n_inc, inc_ang):
+def get_insert_jacobi_simple(
+    jacobi, 
+    wls, 
+    d, 
+    n_layers, 
+    n_sub, 
+    n_inc, 
+    inc_ang, 
+    total_layer_number=500
+):
     """
     This function calculates the Jacobi matrix of a given TFNN. Back 
     propagation is implemented to acquire accurate result.
@@ -58,8 +67,11 @@ def get_insert_jacobi_simple(jacobi, wls, d, n_layers, n_sub, n_inc, inc_ang):
     n_inc_device = cuda.to_device(n_inc)
 
     # allocate space for Jacobi matrix
-    jacobi_device = cuda.device_array((wls_size * 2, layer_number),\
-         dtype="float64")
+    jacobi_device = cuda.device_array(
+        (wls_size * 2, layer_number),
+        strides = (8 * total_layer_number, 8), 
+        dtype="float64"
+    )
 
     # invoke kernel
     block_size = 16 # threads per block
@@ -83,8 +95,18 @@ def get_insert_jacobi_simple(jacobi, wls, d, n_layers, n_sub, n_inc, inc_ang):
 
 
 @cuda.jit
-def forward_and_backward_propagation(jacobi, wls, d, n_A_arr, n_B_arr,
-                 n_sub_arr, n_inc_arr, inc_ang, wls_size, layer_number):
+def forward_and_backward_propagation(
+    jacobi, 
+    wls, 
+    d, 
+    n_A_arr,
+    n_B_arr,             
+    n_sub_arr, 
+    n_inc_arr,
+    inc_ang, 
+    wls_size,
+    layer_number, 
+):
     """
     Parameters:
         jacobi (cuda.device_array):

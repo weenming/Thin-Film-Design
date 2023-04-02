@@ -26,7 +26,7 @@ class TestJacobi(unittest.TestCase):
 
         jacobi = np.empty((wls.shape[0] * 2, 30))
         get_jacobi.get_jacobi_simple(jacobi, wls, f.get_d(), \
-            f.spectrum[0].n, f.spectrum[0].n_sub, f.spectrum[0].n_inc, inc_ang)
+            f.spectrum[0].n, f.spectrum[0].n_sub, f.spectrum[0].n_inc, inc_ang, jacobi.shape[1])
 
 
         # read expected spec from file
@@ -51,7 +51,7 @@ def test_film_jacobi_debug():
 
     jacobi = np.empty((wls.shape[0] * 2, 30))
     get_jacobi.get_jacobi_simple(jacobi, wls, f.get_d(), \
-        f.spectrum[0].n, f.spectrum[0].n_sub, f.spectrum[0].n_inc, inc_ang)
+        f.spectrum[0].n, f.spectrum[0].n_sub, f.spectrum[0].n_inc, inc_ang, jacobi.shape[1])
     
     print(jacobi)
 

@@ -88,55 +88,22 @@ def get_insert_grad(film: FilmSimple, target_spec_ls):
     J = np.empty((target_spec.shape[0], d.shape[0]))
     f = np.empty(target_spec.shape[0]) # only R spec: no absorption
     # TODO: refractor
-    M = MAX_LAYER
-    for i in range(d.shape[0] // M):
-        stack_J(
-            J, 
-            [[
-                y[0][:, i * M: (i + 1) * M], 
-                y[1][i * M: (i + 1) * M], 
-                y[2][i * M: (i + 1) * M]
-            ] for y in n_arrs_ls], # i know it is shit :( 
-            d[i * M: (i + 1) * M], 
-            target_spec_ls, 
-            get_J=get_insert_jacobi_simple
-        )
-        stack_f(
-            f, 
-            [[
-                y[0][:, i * M: (i + 1) * M], 
-                y[1][i * M: (i + 1) * M], 
-                y[2][i * M: (i + 1) * M]
-            ] for y in n_arrs_ls], 
-            d[i * M: (i + 1) * M], 
-            target_spec_ls, 
-            target_spec
-        )
+    stack_f(
+        f, 
+        n_arrs_ls, 
+        d, 
+        target_spec_ls, 
+        target_spec
+    )
+    stack_J(
+        J, 
+        n_arrs_ls, 
+        d, 
+        target_spec_ls, 
+        get_J=get_insert_jacobi_simple, 
+        MAX_LAYER_NUMBER=MAX_LAYER
+    )
 
-    if d.shape[0] % M > 0:
-        last_i = d.shape[0] // M
-        stack_J(
-            J, 
-            [[
-                y[0][:, last_i * M:], 
-                y[1][last_i * M:], 
-                y[2][last_i * M:]
-            ] for y in n_arrs_ls], # i know it is shit :( 
-            d[last_i * M:], 
-            target_spec_ls, 
-            get_J=get_insert_jacobi_simple
-        )
-        stack_f(
-            f, 
-            [[
-                y[0][:, last_i * M:], 
-                y[1][last_i * M:], 
-                y[2][last_i * M:]
-            ] for y in n_arrs_ls], 
-            d[last_i * M:], 
-            target_spec_ls, 
-            target_spec
-        )
     # find insertion place with largest negative gradient
     grad = np.dot(J.T, f)
     return grad

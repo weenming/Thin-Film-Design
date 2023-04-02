@@ -45,7 +45,15 @@ class Design:
         return self.film.get_d().sum()
 
         
-    def TFNN_train(self, needle_epoch, record=False, error=1e-5, max_step=1000):
+    def TFNN_train(
+        self,
+        needle_epoch, 
+        record=False, 
+        error=1e-5, 
+        max_step=1000, 
+        show=False, 
+        show_warning=True, 
+    ):
         """
         Combination of needle insertion and gradient descent
 
@@ -60,26 +68,42 @@ class Design:
 
         for i in range(needle_epoch):
             # LM gradient descent
-            step_count = gd.LM_optimize_d_simple(
-                self.film,
-                self.target_specs,
-                error,
-                max_step
-            )
-            print(f'{i}-th iteration, loss: {self.calculate_loss()}, {step_count} gd steps')
-            
-            # Needle insertion
-            inserted, insert_grad = insert.insert_1_layer(
-                self.film,
-                self.target_specs,
-            )
-            
-            if not inserted:
-                print(f'{i}-th iteration, cannot insert.')
+            try:
+                step_count = gd.LM_optimize_d_simple(
+                    self.film,
+                    self.target_specs,
+                    error,
+                    max_step
+                )
+                if show:
+                    print(f'{i}-th iteration, loss: {self.calculate_loss()},', \
+                        f'{step_count} gd steps')
+            except OverflowError as e:
+                if show_warning:
+                    print('Parameter overflow in gd, end needle design: \n', e.args)
                 return
-            else:
-                print(f'{i}-th iteration, new layer inserted. now ' +\
-                      f'{self.film.get_layer_number()} layers')
+
+            # Needle insertion
+            try:
+                inserted, insert_grad = insert.insert_1_layer(
+                    self.film,
+                    self.target_specs, 
+                    show=show, 
+                )
+                if show:
+                    print(f'{i}-th iteration, new layer inserted. now ' +\
+                          f'{self.film.get_layer_number()} layers')
+            except OverflowError as e:
+                if show_warning:
+                    print('Parameter overflow in insertion, end needle design:\n', e.args)
+                return # end design when problems like too many layers etc. occur
+            except ValueError as e:
+                if show:
+                    print(f'{i}-th iteration, cannot insert.')
+                if show_warning:
+                    print(e.args)
+
+            # record
             if record:
                 self.training_info.append({
                     'loss': self.calculate_loss(),
@@ -87,7 +111,8 @@ class Design:
                     'step': step_count, # gd steps in this needle iteration
                     'insert_gd': insert_grad
                 })
-                print(f'{i}-th iteration recorded')
+                if show:
+                    print(f'{i}-th iteration recorded')
 
 class DesignSimple(Design):
     """

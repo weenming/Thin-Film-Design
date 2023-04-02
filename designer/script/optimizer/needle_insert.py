@@ -6,7 +6,7 @@ import copy
 
 from film import FilmSimple
 from spectrum import BaseSpectrum
-from optimizer.LM_gradient_descent import stack_f, stack_J
+from grad_helper import stack_f, stack_J
 from gets.get_insert_jacobi import get_insert_jacobi_simple
 
 MAX_LAYER = 500
@@ -15,7 +15,8 @@ def insert_1_layer(
     film: FilmSimple, 
     target_spec_ls: list[BaseSpectrum], 
     insert_search_pts=None, 
-    insert_places: np.array=None
+    insert_places: np.array=None, 
+    show=True
 ):
     """
     find the layer and position to insert the new layer and update the film
@@ -31,13 +32,12 @@ def insert_1_layer(
     """
 
     if insert_places is not None:
-        assert False, 'not yet implemented :('
-    
-    insert_search_pts = (MAX_LAYER // film.get_layer_number() - 1) // 2
+        raise NotImplementedError('specifying insertion places not yet implemented :(')
+    if insert_search_pts is None:
+        insert_search_pts = (MAX_LAYER // film.get_layer_number() - 1) // 2
     # check
     if insert_search_pts <= 0:
-        print('Cannot insert due to GPU limitation')
-        return False, None
+        raise OverflowError('WARNING: Cannot insert due to layer number limitation')
     
     insert_idx_arr = make_test_insert_film(film, insert_search_pts)
 
@@ -45,19 +45,21 @@ def insert_1_layer(
     
     greedy_insert_idx = np.argmin(grad[insert_idx_arr])
     greedy_insert_layer_idx = insert_idx_arr[greedy_insert_idx]
-    # check
-    if grad[greedy_insert_layer_idx] >= 0:
-        print(f'WARNING: positive grad everywhere, min grad:', \
-               f'{grad[greedy_insert_layer_idx]}')
-    elif grad[greedy_insert_layer_idx] > -1e-5:
-        print(f'WARNING: insert gradient close to zero, min grad:', \
-              f'{grad[greedy_insert_layer_idx]}')
-    elif greedy_insert_idx % insert_search_pts in [0, 1]:
-        print('WARNING: inserted layer is on the edge of a layer', \
-              'which may indicate the termination of needle optimization')
-
     # remove test layers but keep the best layer (needle insertion)
     film.remove_negative_thickness_layer(exclude=[greedy_insert_layer_idx])
+
+
+    # check
+    if grad[greedy_insert_layer_idx] >= 0:
+        raise ValueError(f'WARNING: positive grad everywhere, min grad:', \
+               f'{grad[greedy_insert_layer_idx]}')
+    elif grad[greedy_insert_layer_idx] > -1e-5:
+        raise ValueError(f'WARNING: insert gradient close to zero, min grad:', \
+              f'{grad[greedy_insert_layer_idx]}')
+    elif greedy_insert_idx % insert_search_pts in [0, 1]:
+        raise ValueError('WARNING: inserted layer is on the edge of a layer', \
+              'which may indicate the termination of needle optimization')
+
     return True, grad[greedy_insert_layer_idx]
 
 
@@ -85,7 +87,7 @@ def get_insert_grad(film: FilmSimple, target_spec_ls):
     d = film.get_d()
     J = np.empty((target_spec.shape[0], d.shape[0]))
     f = np.empty(target_spec.shape[0]) # only R spec: no absorption
-    # TODO: split d to allow more insertion layers
+    # TODO: refractor
     M = MAX_LAYER
     for i in range(d.shape[0] // M):
         stack_J(
@@ -152,7 +154,7 @@ def make_test_insert_film(film, insert_search_pts, split=False):
         # ensure not exceed cuda restrictions
         # which is MAX_LAYER layers (inserted) or layer * insert_pts * 2 < MAX_LAYER
         assert film.get_layer_number() * (insert_search_pts * 2 + 1) <= MAX_LAYER, \
-            'too many search points.'
+            'too many search points.' # should have been caught earlier
         
     insert_idx_arr = [j * 2 + i * (2 * insert_search_pts + 1) + 1
                         for i in range(film.get_layer_number()) 

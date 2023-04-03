@@ -4,7 +4,27 @@ from gets.get_jacobi import get_jacobi_simple
 from gets.get_spectrum import get_spectrum_simple
 
 from film import FilmSimple
-from spectrum import BaseSpectrum
+from spectrum import BaseSpectrum, Spectrum
+
+def stack_init_params(film:FilmSimple, target_spec_ls: list[Spectrum]):
+    # stack parameters & preparations
+    target_spec = np.array([])
+    n_arrs_ls = []
+    for s in target_spec_ls:
+        target_spec = np.append(target_spec, s.get_R())
+        target_spec = np.append(target_spec, s.get_T())
+        # calculate refractive indices in advance and store
+
+        # In LM optimization this saves time but in needle
+        # insertion it does not. Only to stay close to the 
+        # implementation in LM descent for reusing code
+
+        n_arrs_ls.append([
+            film.calculate_n_array(s.WLS), 
+            film.calculate_n_sub(s.WLS), 
+            film.calculate_n_inc(s.WLS)
+        ])
+    return target_spec, n_arrs_ls
 
 def stack_f(
     f_old, 
@@ -41,8 +61,8 @@ def stack_f(
             s.WLS,
             d,
             n_arrs[0],
-            n_arrs[1],
-            n_arrs[2],
+            n_arrs[1], # n_sub
+            n_arrs[2], # n_inc
             s.INC_ANG
         )
         wl_idx += wls_num
@@ -53,7 +73,7 @@ def stack_f(
 def stack_J(
     J_old, 
     n_arrs_ls, 
-    d, 
+    d: np.array, 
     target_spec_ls: list[BaseSpectrum],
     get_J = get_jacobi_simple, 
     MAX_LAYER_NUMBER=250, 
@@ -64,23 +84,28 @@ def stack_J(
     Note that calculation of Jacobian consumes a memory that scales
     with layer number. When too large, must split up.
     """
-    wl_idx = 0
     d_idx = 0
     M = MAX_LAYER_NUMBER
-    for layer_idx in range((d.shape[0] - 1) // M + 1):
+    d_num = d.shape[0]
+    for _ in range((d_num - 1) // M + 1):
+        d_idx_next = min(d_num, d_idx + M)
+
+        wl_idx = 0
         for s, n_arrs in zip(target_spec_ls, n_arrs_ls):
             wl_num = s.WLS.shape[0] * 2 # R and T
             # only reflectance
             get_J(
-                J_old[wl_idx: wl_idx + wl_num, :],
+                J_old[wl_idx: wl_idx + wl_num, d_idx: d_idx_next],
                 s.WLS, 
-                d,
-                n_arrs[0][:, d_idx: d_idx + M],
-                n_arrs[1], 
-                n_arrs[2], 
-                s.INC_ANG
+                d[d_idx: d_idx_next],
+                n_arrs[0][:, d_idx: d_idx_next],
+                n_arrs[1][:],  # n_sub
+                n_arrs[2][:],  # n_inc
+                s.INC_ANG, 
+                total_layer_number=d_num
             )
             wl_idx += wl_num
+        d_idx += M
     return
 
 

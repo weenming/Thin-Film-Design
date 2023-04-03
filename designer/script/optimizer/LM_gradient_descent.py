@@ -5,7 +5,7 @@ from gets.get_spectrum import get_spectrum_simple
 from film import FilmSimple
 from spectrum import BaseSpectrum
 
-from grad_helper import stack_f, stack_J
+from optimizer.grad_helper import stack_f, stack_J, stack_init_params
 
 
 def LM_optimize_d_simple(
@@ -21,24 +21,10 @@ def LM_optimize_d_simple(
     """
 
     # Prep: calculate refractive index & stack target spectrum into one array
-    target_spec = np.array([])
-    n_arrs_ls = []
-    for s in target_spec_ls:
-        # both R and T are calculated
-        target_spec = np.append(target_spec, s.get_R())
-        target_spec = np.append(target_spec, s.get_T())
-        # calculate refractive indices in advance and store to save time
-        n_arrs_ls.append([
-            film.calculate_n_array(s.WLS), 
-            film.calculate_n_sub(s.WLS), 
-            film.calculate_n_inc(s.WLS)])
+    target_spec, n_arrs_ls = stack_init_params(film, target_spec_ls)
     d = film.get_d()
 
     # check layer number. 
-    # TODO: stack jacobian to overcome 
-    MAX_LAYER_NUMBER = 250
-    if d.shape[0] > MAX_LAYER_NUMBER:
-        raise OverflowError('too many layers!')
     
     # allocate memory for J and f
     J = np.empty((target_spec.shape[0], d.shape[0]))

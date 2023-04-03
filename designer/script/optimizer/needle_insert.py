@@ -6,7 +6,7 @@ import copy
 
 from film import FilmSimple
 from spectrum import BaseSpectrum
-from grad_helper import stack_f, stack_J
+from optimizer.grad_helper import stack_f, stack_J, stack_init_params
 from gets.get_insert_jacobi import get_insert_jacobi_simple
 
 MAX_LAYER = 500
@@ -33,7 +33,7 @@ def insert_1_layer(
 
     if insert_places is not None:
         raise NotImplementedError('specifying insertion places not yet implemented :(')
-    if insert_search_pts is None:
+    if insert_search_pts is None: # use default search length
         insert_search_pts = (MAX_LAYER // film.get_layer_number() - 1) // 2
     # check
     if insert_search_pts <= 0:
@@ -65,24 +65,8 @@ def insert_1_layer(
 
 
 def get_insert_grad(film: FilmSimple, target_spec_ls):
-    # stack parameters & preparations
-    target_spec = np.array([])
-    n_arrs_ls = []
-    for s in target_spec_ls:
-        target_spec = np.append(target_spec, s.get_R())
-        target_spec = np.append(target_spec, s.get_T())
-        # calculate refractive indices in advance and store
-
-        # In LM optimization this saves time but in needle
-        # insertion it does not. Only to stay close to the 
-        # implementation in LM descent for reusing code
-
-        n_arrs_ls.append([
-            film.calculate_n_array(s.WLS), 
-            film.calculate_n_sub(s.WLS), 
-            film.calculate_n_inc(s.WLS)
-        ])
-        
+    # prepare initial params
+    target_spec, n_arrs_ls = stack_init_params(film, target_spec_ls)
     # allocate space and calculate J and f
     d = film.get_d()
     J = np.empty((target_spec.shape[0], d.shape[0]))

@@ -83,6 +83,16 @@ class Design:
                     print('Parameter overflow in gd, end needle design: \n', e.args)
                 return
 
+            # record
+            if record:
+                self.training_info.append({
+                    'loss': self.calculate_loss(),
+                    'film': copy.deepcopy(self.film),
+                    'step': step_count, # gd steps in this needle iteration
+                })
+                if show:
+                    print(f'{i}-th iteration recorded')
+
             # Needle insertion
             try:
                 inserted, insert_grad = insert.insert_1_layer(
@@ -102,17 +112,8 @@ class Design:
                     print(f'{i}-th iteration, cannot insert.')
                 if show_warning:
                     print(e.args)
+                return
 
-            # record
-            if record:
-                self.training_info.append({
-                    'loss': self.calculate_loss(),
-                    'film': copy.deepcopy(self.film),
-                    'step': step_count, # gd steps in this needle iteration
-                    'insert_gd': insert_grad
-                })
-                if show:
-                    print(f'{i}-th iteration recorded')
 
 class DesignSimple(Design):
     """

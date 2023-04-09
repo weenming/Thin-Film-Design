@@ -53,12 +53,7 @@ def insert_1_layer(
     if grad[greedy_insert_layer_idx] >= 0:
         raise ValueError(f'WARNING: positive grad everywhere, min grad:', \
                f'{grad[greedy_insert_layer_idx]}')
-    elif grad[greedy_insert_layer_idx] > -1e-5:
-        raise ValueError(f'WARNING: insert gradient close to zero, min grad:', \
-              f'{grad[greedy_insert_layer_idx]}')
-    elif greedy_insert_idx % insert_search_pts in [0, 1]:
-        raise ValueError('WARNING: inserted layer is on the edge of a layer', \
-              'which may indicate the termination of needle optimization')
+
 
     return True, grad[greedy_insert_layer_idx]
 

@@ -1,5 +1,6 @@
 import sys
 sys.path.append("./designer/script")
+sys.path.append('./')
 
 import unittest
 import time

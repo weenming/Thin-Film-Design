@@ -16,10 +16,11 @@ def mul(mat1, mat2):
     mat1[1, 0] = a10
     mat1[1, 1] = a11
 
+
 @cuda.jit
 def mul_to(mat1, mat2, dest):
     """
-    Multiply two 2 * 2 matrices and SAVE TO THE FIRST MATRIX!
+    Multiply two 2 * 2 matrices and save to dest
     """
     a00 = mat1[0, 0] * mat2[0, 0] + mat1[0, 1] * mat2[1, 0]
     a01 = mat1[0, 0] * mat2[0, 1] + mat1[0, 1] * mat2[1, 1]
@@ -31,13 +32,15 @@ def mul_to(mat1, mat2, dest):
     dest[1, 0] = a10
     dest[1, 1] = a11
 
+
 @cuda.jit
 def hadm_mul(mat1, mat2):
     """
     Element-wise product, or Hadamard product of two 2 * 2 matrices
     """
     return mat1[0, 0] * mat2[0, 0] + mat1[0, 1] * mat2[0, 1] + \
-         mat1[1, 0] * mat2[1, 0] + mat1[1, 1] * mat2[1, 1] 
+        mat1[1, 0] * mat2[1, 0] + mat1[1, 1] * mat2[1, 1]
+
 
 @cuda.jit
 def tsp(mat, dest):

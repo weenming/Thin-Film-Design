@@ -3,6 +3,9 @@ import numpy as np
 import scipy
 
 
+import importlib.resources as pkg_resources # python > 3.7
+from designer import material_data
+
 
 # use these wrapper functions to select which model / exp data to use
 def get_n_SiO2(wl):
@@ -37,14 +40,14 @@ def get_n_Air(wl):
 def load_from_file(fname_n, fname_k) -> np.array:
     try:
         wls, n = np.loadtxt(
-            fname_n, 
+            pkg_resources.read_text(material_data, fname_n).split(),
             dtype='float, float', 
             skiprows=1, 
             unpack=True, 
             delimiter=','
         )
         wls_2, k = np.loadtxt(
-            fname_k, 
+            pkg_resources.read_text(material_data, fname_k).split(), 
             dtype='float, float', 
             skiprows=1, 
             unpack=True, 
@@ -78,8 +81,8 @@ def get_Si_exp(wl):
     global cached_Si, wls_Si, n_Si
     if not cached_Si:
         wls_Si, n_Si = load_from_file(
-            './designer/material_data/Si_n_Green-2008.csv',
-            './designer/material_data/Si_k_Green-2008.csv'
+            'Si_n_Green-2008.csv',
+            'Si_k_Green-2008.csv'
         )
         n_Si_interp = scipy.interpolate.interp1d(wls_Si, n_Si)
     

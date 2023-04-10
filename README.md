@@ -64,8 +64,4 @@ Note that the version of cudatoolkit should match that of the version of the dri
 - gradient for insertions in needle method.
 
 ## To-do
-
-- film class
-  - instance has: refractive index of each layer at specified wl
-- conceal LM and insertions into modules, making main functions more concise and reduce duplicate code.
-- unit tests
+- refractor of forward propagation

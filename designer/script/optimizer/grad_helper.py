@@ -57,7 +57,7 @@ def stack_f(
         layer_num (int):
             layer number
     """
-    if spec_batch_idx == None:
+    if spec_batch_idx is None:
         spec_batch_idx = list(range(len(target_spec_ls))) 
 
     wl_idx = 0
@@ -66,7 +66,6 @@ def stack_f(
         wl_num = wl_batch_idx.shape[0]
 
         if i not in spec_batch_idx:  # for SGD
-            wl_idx += wl_num
             continue
 
         # note that numpy array slicing does not allocate new space in memory
@@ -81,8 +80,8 @@ def stack_f(
         )
 
         # should not create new arr.
-        f_old[wl_idx: wl_idx + wl_num] -= \
-            np.append(s.get_R(), s.get_T())[wl_batch_idx]
+        f_old[wl_idx         : wl_idx + wl_num] -= s.get_R()[wl_batch_idx]
+        f_old[wl_idx + wl_num: wl_idx + wl_num * 2] -= s.get_T()[wl_batch_idx]
 
 
         wl_idx += wl_num
@@ -96,7 +95,7 @@ def stack_J(
     target_spec_ls: list[BaseSpectrum],
     get_J=get_jacobi_simple,
     MAX_LAYER_NUMBER=250,
-    batch_idx=None,
+    spec_batch_idx=None,
     wl_batch_idx=None,
 ):
     """
@@ -107,34 +106,33 @@ def stack_J(
     Note that calculation of Jacobian consumes a memory that scales
     with layer number. When too large, must split up.
     """
-    if batch_idx == None:
-        batch_idx = list(range(len(target_spec_ls))) 
+    if spec_batch_idx is None:
+        spec_batch_idx = list(range(len(target_spec_ls))) 
 
-    d_idx = 0
+    d_count = 0
     M = MAX_LAYER_NUMBER
     d_num = d.shape[0]
     for _ in range((d_num - 1) // M + 1):
-        d_idx_next = min(d_num, d_idx + M)
+        d_count_next = min(d_num, d_count + M)
 
-        wl_idx = 0
+        wl_count = 0
         for i, (s, n_arrs) in enumerate(zip(target_spec_ls, n_arrs_ls)):
 
-            wl_num = wl_batch_idx.shape[0]  # R and T: wbatch can be 2 #wl long
+            wl_num = wl_batch_idx.shape[0] # R and T: wbatch can be 2 #wl long
 
-            if i not in batch_idx:  # for SGD
-                wl_idx += wl_num
+            if i not in spec_batch_idx:  # for SGD
                 continue
 
             get_J(
-                J_old[wl_idx: wl_idx + wl_num, d_idx: d_idx_next],  # R & T
-                s.WLS,
-                d[d_idx: d_idx_next],
-                n_arrs[0][wl_batch_idx, d_idx: d_idx_next],
+                J_old[wl_count: wl_count + wl_num * 2, d_count: d_count_next],  # R & T
+                s.WLS[wl_batch_idx],
+                d[d_count: d_count_next],
+                n_arrs[0][wl_batch_idx, d_count: d_count_next],
                 n_arrs[1][wl_batch_idx],  # n_sub
                 n_arrs[2][wl_batch_idx],  # n_inc
                 s.INC_ANG,
                 total_layer_number=d_num
             )
-            wl_idx += wl_num
-        d_idx += M
+            wl_count += wl_num * 2
+        d_count += M
     return

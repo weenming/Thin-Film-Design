@@ -4,6 +4,7 @@ sys.path.append('./')
 
 from design import DesignForSpecSimple
 from optimizer.adam import adam_optimize
+from optimizer.adam_non_sgd import adam_optimize_non_sgd
 from optimizer.LM_gradient_descent import LM_optimize_d_simple
 from spectrum import Spectrum
 from film import FilmSimple
@@ -74,7 +75,7 @@ def make_design():
     target_spec_R = np.ones(wls.shape[0], dtype='float')
     target_spec = Spectrum(0., wls, target_spec_R)
 
-    d_init = np.random.random(520) * 100.
+    d_init = np.random.random(52) * 100.
     init_film = FilmSimple('SiO2', 'TiO2', 'SiO2', d_init)
 
     design = DesignForSpecSimple(target_spec, init_film)
@@ -93,10 +94,17 @@ def Adam_descent_test(design: DesignForSpecSimple):
     As layer number increases, step size needs to decrease
     '''
 
+def Non_SGD_Adam_descent_test(design: DesignForSpecSimple):
+    adam_optimize_non_sgd(design.film, design.target_specs,
+                  max_steps=50, alpha=1, show=True)
+    print(design.film.get_d())
+    '''
+    As layer number increases, step size needs to decrease
+    '''
 
 if __name__ == '__main__':
     for seed in [0, 100, 233, 42, 555] + list(np.arange(20)):
         print(f'seed: {seed}')
         np.random.seed(seed)
         design = make_design()
-        LM_descent_test(design)
+        Non_SGD_Adam_descent_test(design)

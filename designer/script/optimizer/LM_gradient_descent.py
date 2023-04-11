@@ -5,7 +5,7 @@ from gets.get_spectrum import get_spectrum_simple
 from film import FilmSimple
 from spectrum import BaseSpectrum
 
-from optimizer.grad_helper import stack_f, stack_J, stack_init_params
+from optimizer.grad_helper_non_sgd import stack_f, stack_J, stack_init_params
 
 
 def LM_optimize_d_simple(
@@ -27,9 +27,10 @@ def LM_optimize_d_simple(
     # check layer number.
 
     # allocate memory for J and f
-    J = np.empty((target_spec.shape[0], d.shape[0]))
-    f = np.empty(target_spec.shape[0])
-    f_new = np.empty(target_spec.shape[0])
+    wl_num = np.sum([s.WLS.shape[0] * 2 for s in target_spec_ls])
+    J = np.empty((wl_num, d.shape[0])) # R & T
+    f = np.empty(wl_num)
+    f_new = np.empty(wl_num)
 
     losses = []
 

@@ -33,7 +33,8 @@ def stack_f(
     n_arrs_ls: list[list[np.array]],
     d,
     target_spec_ls: list[BaseSpectrum],
-    batch_idx=None,
+    spec_batch_idx=None,
+    wl_batch_idx=None,
     get_f=get_spectrum_simple,
 ):
     """
@@ -56,33 +57,35 @@ def stack_f(
         layer_num (int):
             layer number
     """
-    batch_idx = list(range(len(target_spec_ls))) is batch_idx == None
+    if spec_batch_idx == None:
+        spec_batch_idx = list(range(len(target_spec_ls))) 
 
     wl_idx = 0
     for i, (s, n_arrs) in enumerate(zip(target_spec_ls, n_arrs_ls)):
 
-        wl_num = s.WLS.shape[0]
+        wl_num = wl_batch_idx.shape[0]
 
-        if i not in batch_idx:  # for SGD
+        if i not in spec_batch_idx:  # for SGD
             wl_idx += wl_num
             continue
 
         # note that numpy array slicing does not allocate new space in memory
         get_f(
             f_old[wl_idx: wl_idx + wl_num * 2],  # R & T
-            s.WLS,
+            s.WLS[wl_batch_idx],
             d,
-            n_arrs[0],
-            n_arrs[1],  # n_sub
-            n_arrs[2],  # n_inc
+            n_arrs[0][wl_batch_idx],
+            n_arrs[1][wl_batch_idx],  # n_sub
+            n_arrs[2][wl_batch_idx],  # n_inc
             s.INC_ANG
         )
 
         # should not create new arr.
-        f_old[wl_idx: wl_idx + wl_num] -= s.get_R()
-        f_old[wl_idx + wl_num: wl_idx + wl_num * 2] -= s.get_T()
+        f_old[wl_idx: wl_idx + wl_num] -= \
+            np.append(s.get_R(), s.get_T())[wl_batch_idx]
 
-        wl_idx += wl_num * 2
+
+        wl_idx += wl_num
     return
 
 
@@ -93,7 +96,8 @@ def stack_J(
     target_spec_ls: list[BaseSpectrum],
     get_J=get_jacobi_simple,
     MAX_LAYER_NUMBER=250,
-    batch_size=None
+    batch_idx=None,
+    wl_batch_idx=None,
 ):
     """
     Calculates J  w.r.t a list objective spectrums and add them together.
@@ -103,7 +107,8 @@ def stack_J(
     Note that calculation of Jacobian consumes a memory that scales
     with layer number. When too large, must split up.
     """
-    batch_idx = list(range(len(target_spec_ls))) is batch_idx == None
+    if batch_idx == None:
+        batch_idx = list(range(len(target_spec_ls))) 
 
     d_idx = 0
     M = MAX_LAYER_NUMBER
@@ -114,22 +119,22 @@ def stack_J(
         wl_idx = 0
         for i, (s, n_arrs) in enumerate(zip(target_spec_ls, n_arrs_ls)):
 
-            wl_num = s.WLS.shape[0]  # R and T
+            wl_num = wl_batch_idx.shape[0]  # R and T: wbatch can be 2 #wl long
 
             if i not in batch_idx:  # for SGD
-                wl_idx += wl_num * 2
+                wl_idx += wl_num
                 continue
 
             get_J(
-                J_old[wl_idx: wl_idx + wl_num * 2, d_idx: d_idx_next],  # R & T
+                J_old[wl_idx: wl_idx + wl_num, d_idx: d_idx_next],  # R & T
                 s.WLS,
                 d[d_idx: d_idx_next],
-                n_arrs[0][:, d_idx: d_idx_next],
-                n_arrs[1][:],  # n_sub
-                n_arrs[2][:],  # n_inc
+                n_arrs[0][wl_batch_idx, d_idx: d_idx_next],
+                n_arrs[1][wl_batch_idx],  # n_sub
+                n_arrs[2][wl_batch_idx],  # n_inc
                 s.INC_ANG,
                 total_layer_number=d_num
             )
-            wl_idx += wl_num * 2
+            wl_idx += wl_num
         d_idx += M
     return

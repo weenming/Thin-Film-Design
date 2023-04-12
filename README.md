@@ -23,7 +23,7 @@ Run on a machine supporting CUDA
 - cudatoolkit
 - matplotlib
 
-Use `conda create -n TFNN python=3.9 ipykernel scipy numpy=1.23 numba=0.56.4 matplotlib cudatoolkit=*the cuda version of the driver* -c conda-forge`
+Use `conda create -n TFNN python=3.9 ipykernel scipy numpy=1.23 numba=0.56.4 matplotlib cudatoolkit=*the cuda version of the driver* ipykernel -c conda-forge`
 
 Note that the version of cudatoolkit should match that of the version of the driver, which can be found by the tool `nvidia-smi`
 

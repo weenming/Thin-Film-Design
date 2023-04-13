@@ -98,7 +98,7 @@ def adam_optimize(
             spec_batch_idx = spec_batch_idx, 
             wl_batch_idx = wl_batch_idx
         )
-
+  
         g = J.T @ f
         m = beta1 * m + (1 - beta1) * g
         v = beta2 * v + (1 - beta2) * g ** 2

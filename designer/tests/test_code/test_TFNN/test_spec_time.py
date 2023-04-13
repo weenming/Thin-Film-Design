@@ -4,8 +4,8 @@ import sys
 sys.path.append("./designer/script")
 import timeit
 import film as film
-import gets.get_n as get_n
-import gets.get_cpu.get_spectrum as get_spectrum_cpu
+import tmm.get_n as get_n
+import tmm.get_cpu.get_spectrum as get_spectrum_cpu
 
 import matplotlib.pyplot as plt
 

@@ -1,21 +1,42 @@
 import numpy as np
-from numba import cuda
-from film import FilmSimple
 import cmath
-from gets.mat_lib import mul, tsp # 2 * 2 matrix optr
+from numba import cuda
+from tmm.mat_lib import mul, tsp # 2 * 2 matrix optr
 
 
-def get_E(wls, d, n_layers, n_sub, n_inc, inc_ang):
+
+def get_spectrum_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
     """
+    This function calculates the reflectance and transmittance spectrum of a 
+    non-polarized light (50% p-polarized and 50% s-polarized).
 
-    Parameters:
-        i_start: index to start calculating Wi. If -1, incidence material
-        i_end: index to end. If n, substrate
-            consisitent with the index of the d array
+    It launches a CUDA kernel function after copying essential data to the GPU.
+
+    Note that memory consumption of forward propagation does not scale with layer. 
+
+    Arguments:
+        spectrum (1d np.array):
+            2 * wls.shape[0], type: float64
+            pre-allocated memory space for returning spectrum 
+        wls (1d np.array): 
+            wls.shape[0]
+            wavelengths of the target spectrum
+        d (1d np.array):
+            multi-layer thicknesses after last iteration
+        n_layers (2d np.array): 
+            wls.shape[0] \cross d.shape[0]. 
+            refractive indices of each *layer*
+        n_sub (1d np.array):
+            refractive indices of the substrate
+        n_inc (1d np.array):
+            refractive indices of the incident material
+        inc_ang (float):
+            incident angle in degree
+
     Returns:
-        2 \corss 2 \cross sum of len(wls) for this specturm  (W_i for every wl)
+        size: 2 \cross wls.shape[0] spectrum 
+        (Reflectance spectrum + Transmittance spectrum).
     """
-    E_spec = np.empty((wls.shape[0] * 2, 2), dtype="complex128")
     # layer number of thin film, substrate not included
     layer_number = d.shape[0]
     # convert incident angle in degree to rad
@@ -29,30 +50,41 @@ def get_E(wls, d, n_layers, n_sub, n_inc, inc_ang):
 
     # copy wls, d, n_layers, n_sub, n_inc, inc_ang to GPU
     wls_device = cuda.to_device(wls)
+    # d.astype('float64')
     d_device = cuda.to_device(d)
     # copy 2d arr into 1d as contiguous arr to save data transfer
-    n_A = n_layers[:, 0].copy(order="C") 
+    # BUG: this may be problematic. If the matrix it is copying from is row first
+    # This copy would result in a new array full of "holes" which the kernel func
+    # may not be aware of.
+    n_A = n_layers[:, 0].copy()
     n_A_device = cuda.to_device(n_A)
     # may have only 1 layer. 
     if layer_number == 1:
-        n_B_device = cuda.to_device(np.empty(wls_size))
+        # BUG: this might cause bug in 1 layer scenario. In the kernel function 
+        # nB and nA are used to construct a new array. The data types of these
+        # arrays should thus be same
+        # Spectrum objects the dtype of n is complex 128. keep same here
+
+        # copying n_A seems to work but using np.empty(wls_size, dtype='complex128')
+        # does not. I have literally no idea what is happening...
+        n_B_device = cuda.to_device(n_A.copy())
     else:
-        n_B = n_layers[:, 1].copy(order="C")
+        n_B = n_layers[:, 1].copy()
         n_B_device = cuda.to_device(n_B)
     n_sub_device = cuda.to_device(n_sub)
     n_inc_device = cuda.to_device(n_inc)
     # primitive transfer is not costly so I leave out inc_ang, wls_size and 
     # layer_number
 
-    # allocate space for E spec on GPU
-    E_spec_device = cuda.device_array((wls_size * 2, 2), dtype="complex128")
+    # allocate space for R and T spec
+    spectrum_device = cuda.device_array(wls_size * 2, dtype="float64")
 
     # invoke kernel
     block_size = 16 # threads per block
     grid_size = (wls_size + block_size - 1) // block_size # blocks per grid
     
-    forward_propagation_simple_E[grid_size, block_size](
-        E_spec_device,
+    forward_propagation_simple[grid_size, block_size](
+        spectrum_device,
         wls_device,
         d_device, 
         n_A_device,
@@ -65,17 +97,17 @@ def get_E(wls, d, n_layers, n_sub, n_inc, inc_ang):
     )
     cuda.synchronize()
     # copy to pre-allocated space
-    E_spec_device.copy_to_host(E_spec)
-    return E_spec
-
-
+    spectrum_device.copy_to_host(spectrum)
     
+
+
+
 @cuda.jit
-def forward_propagation_simple_E(E_spec, wls, d, n_A_arr, n_B_arr,
+def forward_propagation_simple(spectrum, wls, d, n_A_arr, n_B_arr,
                  n_sub_arr, n_inc_arr, inc_ang, wls_size, layer_number):
     """
     Parameters:
-        E_spec (cuda.device_array):
+        spectrum (cuda.device_array):
             device array for storing data
         wls (cuda.device_array):
             wavelengths
@@ -91,7 +123,6 @@ def forward_propagation_simple_E(E_spec, wls, d, n_A_arr, n_B_arr,
             number of wavelengths
         layer_number:
             number of layers
-
     """
     thread_id = cuda.grid(1)
     # check this thread is valid
@@ -124,24 +155,20 @@ def forward_propagation_simple_E(E_spec, wls, d, n_A_arr, n_B_arr,
     Ms = cuda.local.array((2, 2), dtype="complex128")    
     Mp = cuda.local.array((2, 2), dtype="complex128")
 
-    # Allocate space for W. 
+    # Allocate space for W. Fill with first term D_{0}^{-1}
+    # TODO: add the influence of n of incident material (when not air)
     Ws = cuda.local.array((2, 2), dtype="complex128")
-    Wp = cuda.local.array((2, 2), dtype="complex128")
-    
-    # Initialize W according to i_start
-    # TODO: add the influence of n of incident material (when not air)  
-
     Ws[0, 0] = 0.5
     Ws[0, 1] = 0.5 / cos_inc
     Ws[1, 0] = 0.5
     Ws[1, 1] = -0.5 / cos_inc
-
+    
+    Wp = cuda.local.array((2, 2), dtype="complex128")
     Wp[0, 0] = 0.5
     Wp[0, 1] = 0.5 / cos_inc
     Wp[1, 0] = 0.5
     Wp[1, 1] = -0.5 / cos_inc
 
-    # forward propagation
     for i in range(layer_number):
         cosi = cos_arr[i % 2]
         ni = n_arr[i % 2]
@@ -165,7 +192,6 @@ def forward_propagation_simple_E(E_spec, wls, d, n_A_arr, n_B_arr,
 
     # construct the last term D_{n+1} 
     # technically this is merely D which is not M (D^{-2}PD)
-
     Ms[0, 0] = 1.
     Ms[0, 1] = 1.
     Ms[1, 0] = n_sub * cos_sub
@@ -179,6 +205,16 @@ def forward_propagation_simple_E(E_spec, wls, d, n_A_arr, n_B_arr,
     mul(Ws, Ms)
     mul(Wp, Mp)
 
-    for i in [0, 1]:
-        E_spec[thread_id, i] = Ws[i, 0] # s-polarized
-        E_spec[thread_id + wls_size, i] = Wp[i, 0] # p-polarized
+    # retrieve R and T (calculate the factor before energy flux)
+    # Note that spectrum is array on device
+    rs = Ws[1, 0] / Ws[0, 0]
+    rp = Wp[1, 0] / Wp[0, 0]
+    R = (rs * rs.conjugate() + rp * rp.conjugate()) / 2
+    spectrum[thread_id] = R.real
+
+    # T should be R - 1
+    ts = 1 / Ws[0, 0]
+    tp = 1 / Wp[0, 0]
+    T = cos_sub / cos_inc * n_sub * (
+        ts * ts.conjugate() + tp * tp.conjugate()) / 2
+    spectrum[thread_id + wls_size] = T.real

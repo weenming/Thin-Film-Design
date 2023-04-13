@@ -1,8 +1,8 @@
 import numpy as np
 import cmath
 from numba import cuda
-from gets.mat_lib import mul_to # multiply
-from gets.mat_lib import tsp # transpose
+from tmm.mat_lib import mul_to # multiply
+from tmm.mat_lib import tsp # transpose
 
 
 

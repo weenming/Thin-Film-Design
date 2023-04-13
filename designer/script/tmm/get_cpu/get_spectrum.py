@@ -1,5 +1,5 @@
 from numpy import *
-from gets.get_cpu.get_n import get_n
+from tmm.get_cpu.get_n import get_n
 
 
 def get_spectrum(wls, d, materials, n_indices=[], theta0=7., substrate=None):

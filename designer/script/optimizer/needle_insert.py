@@ -7,7 +7,7 @@ import copy
 from film import FilmSimple
 from spectrum import BaseSpectrum
 from optimizer.grad_helper import stack_f, stack_J, stack_init_params
-from gets.get_insert_jacobi import get_insert_jacobi_simple
+from tmm.get_insert_jacobi import get_insert_jacobi_simple
 
 MAX_LAYER = 500
 

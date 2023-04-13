@@ -4,8 +4,8 @@ import sys
 sys.path.append("./designer/script")
 import os
 import film as film
-import gets.get_n as get_n
-import gets.get_jacobi as get_jacobi
+import tmm.get_n as get_n
+import tmm.get_jacobi as get_jacobi
 
 import matplotlib.pyplot as plt
 

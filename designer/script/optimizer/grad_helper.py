@@ -1,7 +1,7 @@
 
 import numpy as np
-from gets.get_jacobi import get_jacobi_simple
-from gets.get_spectrum import get_spectrum_simple
+from tmm.get_jacobi import get_jacobi_simple
+from tmm.get_spectrum import get_spectrum_simple
 
 from film import FilmSimple
 from spectrum import BaseSpectrum, Spectrum

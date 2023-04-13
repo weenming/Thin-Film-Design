@@ -107,7 +107,10 @@ def stack_J(
     with layer number. When too large, must split up.
     """
     if spec_batch_idx is None:
-        spec_batch_idx = list(range(len(target_spec_ls))) 
+        spec_batch_idx = list(range(len(target_spec_ls)))
+    if wl_batch_idx is None:
+        wl_num_min = np.min([s.WLS.shape[0] for s in target_spec_ls])
+        wl_batch_idx = np.arange(wl_num_min)
 
     d_count = 0
     M = MAX_LAYER_NUMBER

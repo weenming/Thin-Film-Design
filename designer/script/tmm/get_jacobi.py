@@ -20,6 +20,8 @@ def get_jacobi_simple(
     This function calculates the Jacobi matrix of a given TFNN. Back 
     propagation is implemented to acquire accurate result.
     NOTE: at maximum, MAX_LAYER_NUMBER layers supported
+    BUG: there is propably a 2 time difference in the returned Jacobian, 
+        although it should not cause any problems
 
     Parameters:
         jacobi (2d np.array):

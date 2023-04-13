@@ -33,10 +33,10 @@ class TestJacobi(unittest.TestCase):
         # read expected spec from file
         # count relative path from VS Code project root.....
         expected_jacobi = np.loadtxt("./designer/tests/test_files/expected_jacobi_simple_R_500to1000_30layer_SiO2-TiO2-times-15-SiO2_60inc.csv", dtype="float")
-        self.assertAlmostEqual(np.max(np.abs(jacobi[:wls.shape[0], :] + jacobi[wls.shape[0]:, :])), 0)
-        self.assertAlmostEqual(np.max(np.abs(jacobi[:wls.shape[0], :] - expected_jacobi / 2)), 0)
-        self.assertAlmostEqual(np.max(np.abs(-jacobi[wls.shape[0]:, :] - expected_jacobi / 2)), 0)
-        
+        np.testing.assert_almost_equal(jacobi[:wls.shape[0], :], -jacobi[wls.shape[0]:, :])
+        np.testing.assert_almost_equal(jacobi[:wls.shape[0], :], expected_jacobi[:wls.shape[0], :] / 2)
+        np.testing.assert_almost_equal(jacobi[wls.shape[0]:, :], expected_jacobi[wls.shape[0]:, :] / 2)
+
     def test_many_layer_film_jacobi(self):
         np.random.seed(1)
         layers = 3000

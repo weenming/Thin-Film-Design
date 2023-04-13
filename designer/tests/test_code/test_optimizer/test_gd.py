@@ -27,7 +27,7 @@ class TestGD(unittest.TestCase):
         adam_optimize(design.film, design.
                       target_specs, max_steps=50, alpha=0.1, show=True)
 
-        d_init = np.random.random(523) * 50.  # not integer times of MAX
+        d_init = np.random.random(523) * 50.  # not integer ti9/69mes of MAX
         init_film = FilmSimple('SiO2', 'TiO2', 'SiO2', d_init)
         design = DesignForSpecSimple(target_spec, init_film)
         adam_optimize(design.film, design.target_specs,

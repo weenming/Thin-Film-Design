@@ -32,25 +32,27 @@ Note that the version of cudatoolkit should match that of the version of the dri
 ## File structure
 
 - `script`
-  - `gets` contains functions related to TMM
-    - `get_insert_jacobi.py` Calculate insertion Jacobi matrix for gradient in needle method using TFNN
-    - `get_jacobi.py` Calculate Jacobi matrix in gradient descent using TFNN
+  - `tmm` contains functions related to TMM
+    - `get_insert_jacobi.py` (deprecated) Calculate insertion Jacobi matrix for gradient in needle method using TFNN
+    - `get_jacobi.py` Calculate Jacobi matrix in gradient descent using TFNN. Gradient w.r.t. thicknesses.
+    - `get_jacobi_adjoint.py` Calculate Jacobi matrix in gradient descent using TFNN. Back propagation is implemented using adjoint metghod. Gradient w.r.t.thicknesses.
     - `get_n.py` Calculate and set refractive indices in Film instances
     - `get_spectrum.py` Calculate spectrum from a film instance
+    - `tmm_cpu`
+      - arxived tmm functions using cpu
   - `optimizer` implements different optimization methods
-    - `LM_gradient_descent` executes GD optimization
+    - `LM_gradient_descent` executes gradeint decent by optimizing thicknesses.
+    - `adam` Adam gradien descent by optimizing thicknesses. Implemented SGD by randomly selecting both spectrum and wavelength points.
     - `needle_insert` executes the insertion process given insertion gradient
   - `utils` contains general functions, tools for analysis etc.
-    - `load_deisgns`
-    - `loss` different loss functions
-    - `plot_spectrum`
-    - `sort`
+    - `get_n` Gets refractive indices of a material at specified wavelengths.
+    - `loss` Implements loss functions. 
+    - `substitute` Remove layers that are too thin to be practical. Adjust the thicknesse of adjacent layers s.t. $l_1$ deviation in $\vec{E}$ is minimized in first order approximation of the replaced layers being thin. 
     - `structure` function to plot the structure of a `Film` instance
-  - `design.py`
-  - `film.py`
-  - `LM_gradient_descent.py`
-  - `needle_insert.py`
-
+  - `design.py` Implements Design objects.
+  - `film.py` Implements Film objects.
+  - `spectrum` Implements Spectrum objects
+  
 `main` files implements
 
 - LM descent

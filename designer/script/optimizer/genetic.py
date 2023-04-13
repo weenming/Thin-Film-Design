@@ -10,4 +10,4 @@ from optimizer.LM_gradient_descent import stack_f, stack_J
 
 
 def genetic(film: FilmSimple):
-    return
+    raise NotImplementedError

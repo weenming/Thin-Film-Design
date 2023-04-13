@@ -2,7 +2,7 @@ import numpy as np
 import sys
 sys.path.append("./designer/script")
 import film as film
-import tmm.get_n as get_n
+import utils.get_n as get_n
 
 import matplotlib.pyplot as plt
 

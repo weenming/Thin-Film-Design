@@ -7,7 +7,7 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-from tmm import get_n
+from utils import get_n
 
 
 

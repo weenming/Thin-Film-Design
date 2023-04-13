@@ -1,5 +1,5 @@
 from numpy import *
-from tmm.get_cpu.get_n import get_n
+from tmm.tmm_cpu.get_n import get_n
 
 
 def inserted_layers(d, materials, insert_layer_num, insert_position, insert_thickness=0.00001):

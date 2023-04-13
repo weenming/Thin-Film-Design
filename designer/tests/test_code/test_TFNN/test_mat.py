@@ -10,7 +10,7 @@ class TestMat(unittest.TestCase):
         m1 = np.random.random((2, 2))
         m2 = np.random.random((2, 2))
         m3 = m1.copy()
-        mat.mul(m3, m2)
+        mat.mul_right(m3, m2)
         self.assertAlmostEqual(np.dot(m1, m2)[0, 0], m3[0, 0])
         self.assertAlmostEqual(np.dot(m1, m2)[0, 1], m3[0, 1])
         self.assertAlmostEqual(np.dot(m1, m2)[1, 0], m3[1, 0])

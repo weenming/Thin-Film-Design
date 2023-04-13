@@ -1,5 +1,5 @@
 from numpy import *
-from tmm.get_cpu.get_n import get_n
+from tmm.tmm_cpu.get_n import get_n
 
 
 def get_jacobi(wls, d, materials, n_indices=[], theta0 = 7.):

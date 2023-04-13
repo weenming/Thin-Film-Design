@@ -5,8 +5,8 @@ import copy
 
 from film import FilmSimple
 from spectrum import SpectrumSimple
-import gets.get_intermediate_transfer_matrix as get_W
-from gets.get_E import get_E
+import tmm.get_intermediate_transfer_matrix as get_W
+from tmm.get_E import get_E
 from utils.loss import calculate_RMS
 
 def equal_optical_thickness(f: FilmSimple, d_min):

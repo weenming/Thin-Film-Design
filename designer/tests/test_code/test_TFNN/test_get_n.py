@@ -7,7 +7,7 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-from gets import get_n
+from tmm import get_n
 
 
 

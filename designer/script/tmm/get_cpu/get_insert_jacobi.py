@@ -1,5 +1,5 @@
 from numpy import *
-from gets.get_cpu.get_n import get_n
+from tmm.get_cpu.get_n import get_n
 
 
 def inserted_layers(d, materials, insert_layer_num, insert_position, insert_thickness=0.00001):
@@ -149,7 +149,7 @@ def get_insert_jacobi_faster_multi_inc(wls, d, materials, insert_search_pts, ins
     return jacobi
 
 def get_insert_jacobi(wls, d, materials, insert_search_pts):
-    from gets.get_spectrum import get_spectrum
+    from tmm.get_spectrum import get_spectrum
     """
     Calculates jacobi matrix (wls.shape[0] by insert_search_pts*layer_number)of insertion gradient. To be replaced by using TFNN
     :param wls:

@@ -6,9 +6,9 @@ import os
 import time
 import film as film
 import spectrum
-import gets.get_n as get_n
-import gets.get_jacobi as get_jacobi
-import gets.get_cpu.get_jacobi as get_jacobi_cpu
+import tmm.get_n as get_n
+import tmm.get_jacobi as get_jacobi
+import tmm.get_cpu.get_jacobi as get_jacobi_cpu
 import timeit
 from optimizer.grad_helper import stack_J, stack_init_params
 import matplotlib.pyplot as plt

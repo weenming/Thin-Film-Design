@@ -2,7 +2,7 @@ import numpy as np
 from numba import cuda
 from film import FilmSimple
 import cmath
-from gets.mat_lib import mul, tsp # 2 * 2 matrix optr
+from tmm.mat_lib import mul, tsp # 2 * 2 matrix optr
 
 def get_W_everywhere(film: FilmSimple):
     '''

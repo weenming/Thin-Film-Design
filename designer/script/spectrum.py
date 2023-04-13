@@ -1,6 +1,6 @@
 import numpy as np
 import film
-import gets.get_spectrum as get_spectrum
+import tmm.get_spectrum as get_spectrum
 
 
 class BaseSpectrum:

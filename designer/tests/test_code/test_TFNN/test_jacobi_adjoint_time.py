@@ -103,7 +103,7 @@ def plot_time_GPU():
 
     # start testing at different layer numbers
     # NOTE: max layer number is set in gets.get_jacobi
-    Ns = np.array(range(10, 200000, 100))
+    Ns = np.array(range(10, 20000, 100))
     print(Ns)
     Ts_GPU = []
     for i in Ns:

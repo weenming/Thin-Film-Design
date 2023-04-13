@@ -2,12 +2,13 @@ import unittest
 import numpy as np
 import sys
 sys.path.append("./designer/script")
+sys.path.append("./")
 import os
 import time
 import film as film
 import spectrum
 import utils.get_n as get_n
-import tmm.get_jacobi as get_jacobi
+import tmm.get_jacobi_adjoint as get_jacobi
 import tmm.tmm_cpu.get_jacobi as get_jacobi_cpu
 import timeit
 from optimizer.grad_helper import stack_J, stack_init_params
@@ -59,7 +60,7 @@ def dif_n(layer_number):
 def dif_n_GPU(layer_number):
     N = 1
     t_gpu = timeit.timeit(f"jacobi_GPU({layer_number})", number=N, setup="from __main__ import jacobi_GPU")
-    print(f"GPU, spectrum 500 wls: {t_gpu / N}")
+    print(f"GPU, spectrum 500 wls: {t_gpu / N}, {layer_number} layers")
     
     return t_gpu / N
 
@@ -102,7 +103,7 @@ def plot_time_GPU():
 
     # start testing at different layer numbers
     # NOTE: max layer number is set in gets.get_jacobi
-    Ns = np.array(range(10, 100, 1))
+    Ns = np.array(range(10, 200000, 100))
     print(Ns)
     Ts_GPU = []
     for i in Ns:
@@ -157,6 +158,9 @@ def helper_vs_bare():
     print(f'bare: {(t2 - t1) / 10}')
 
 def test_helper():
+    # This implementation is wrong: by splitting up forward propagation
+    # though theoretically achievable. By implementation using adjoint method
+    # time of invoking kernels is saved
     # Runtime: about 
     # compile first
     print('warm up (compiling)')
@@ -205,4 +209,7 @@ def test_helper():
 #TODO: optimize grid size w.r.t. wavelength size
 
 if __name__ == "__main__":
-    test_helper()
+    # warm up
+    jacobi_GPU(100)
+
+    plot_time_GPU()

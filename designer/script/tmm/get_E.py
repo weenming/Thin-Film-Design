@@ -2,7 +2,7 @@ import numpy as np
 from numba import cuda
 from film import FilmSimple
 import cmath
-from tmm.mat_lib import mul, tsp # 2 * 2 matrix optr
+from tmm.mat_lib import mul_right, tsp # 2 * 2 matrix optr
 
 
 def get_E(wls, d, n_layers, n_sub, n_inc, inc_ang):
@@ -160,8 +160,8 @@ def forward_propagation_simple_E(E_spec, wls, d, n_A_arr, n_B_arr,
         Mp[1, 0] = cosi / ni * sinhi
         Mp[1, 1] = coshi
 
-        mul(Ws, Ms)
-        mul(Wp, Mp)
+        mul_right(Ws, Ms)
+        mul_right(Wp, Mp)
 
     # construct the last term D_{n+1} 
     # technically this is merely D which is not M (D^{-2}PD)
@@ -176,8 +176,8 @@ def forward_propagation_simple_E(E_spec, wls, d, n_A_arr, n_B_arr,
     Mp[1, 0] = cos_sub
     Mp[1, 1] = cos_sub
 
-    mul(Ws, Ms)
-    mul(Wp, Mp)
+    mul_right(Ws, Ms)
+    mul_right(Wp, Mp)
 
     for i in [0, 1]:
         E_spec[thread_id, i] = Ws[i, 0] # s-polarized

@@ -1,6 +1,6 @@
 import numpy as np
 import copy
-import tmm.get_n as get_n
+import utils.get_n as get_n
 import spectrum
 
 

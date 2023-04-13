@@ -1,11 +1,21 @@
 import numpy as np
 import cmath
 from numba import cuda
-from tmm.mat_lib import mul, tsp # 2 * 2 matrix optr
+from tmm.mat_lib import mul_right, mul_left, tsp # 2 * 2 matrix optr
 
 
 
-def get_spectrum_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
+def get_spectrum_simple(
+    spectrum, 
+    wls, 
+    d, 
+    n_layers, 
+    n_sub, 
+    n_inc, 
+    inc_ang, 
+    s_ratio=1, 
+    p_ratio=1
+):
     """
     This function calculates the reflectance and transmittance spectrum of a 
     non-polarized light (50% p-polarized and 50% s-polarized).
@@ -32,6 +42,11 @@ def get_spectrum_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
             refractive indices of the incident material
         inc_ang (float):
             incident angle in degree
+        s_ratio (float):
+            portion of s-polarized light. Only intensity is taken into account,
+            which means randomized phase difference is assumed.
+        p_ratio (float):
+            p-polarized light
 
     Returns:
         size: 2 \cross wls.shape[0] spectrum 
@@ -93,7 +108,9 @@ def get_spectrum_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
         n_inc_device,
         inc_ang_rad,
         wls_size,
-        layer_number
+        layer_number, 
+        s_ratio, 
+        p_ratio
     )
     cuda.synchronize()
     # copy to pre-allocated space
@@ -103,8 +120,20 @@ def get_spectrum_simple(spectrum, wls, d, n_layers, n_sub, n_inc, inc_ang):
 
 
 @cuda.jit
-def forward_propagation_simple(spectrum, wls, d, n_A_arr, n_B_arr,
-                 n_sub_arr, n_inc_arr, inc_ang, wls_size, layer_number):
+def forward_propagation_simple(
+    spectrum, 
+    wls, 
+    d, 
+    n_A_arr, 
+    n_B_arr,
+    n_sub_arr, 
+    n_inc_arr, 
+    inc_ang, 
+    wls_size, 
+    layer_number, 
+    s_ratio, 
+    p_ratio
+):
     """
     Parameters:
         spectrum (cuda.device_array):
@@ -187,8 +216,8 @@ def forward_propagation_simple(spectrum, wls, d, n_A_arr, n_B_arr,
         Mp[1, 0] = cosi / ni * sinhi
         Mp[1, 1] = coshi
 
-        mul(Ws, Ms)
-        mul(Wp, Mp)
+        mul_right(Ws, Ms)
+        mul_right(Wp, Mp)
 
     # construct the last term D_{n+1} 
     # technically this is merely D which is not M (D^{-2}PD)
@@ -202,19 +231,21 @@ def forward_propagation_simple(spectrum, wls, d, n_A_arr, n_B_arr,
     Mp[1, 0] = cos_sub
     Mp[1, 1] = cos_sub
 
-    mul(Ws, Ms)
-    mul(Wp, Mp)
+    mul_right(Ws, Ms)
+    mul_right(Wp, Mp)
 
     # retrieve R and T (calculate the factor before energy flux)
     # Note that spectrum is array on device
     rs = Ws[1, 0] / Ws[0, 0]
     rp = Wp[1, 0] / Wp[0, 0]
-    R = (rs * rs.conjugate() + rp * rp.conjugate()) / 2
+    R = (s_ratio * rs * rs.conjugate() + p_ratio * rp * rp.conjugate()) \
+        / (s_ratio + p_ratio)
     spectrum[thread_id] = R.real
 
     # T should be R - 1
     ts = 1 / Ws[0, 0]
     tp = 1 / Wp[0, 0]
-    T = cos_sub / cos_inc * n_sub * (
-        ts * ts.conjugate() + tp * tp.conjugate()) / 2
+    T = cos_sub / cos_inc * n_sub * \
+        (s_ratio * ts * ts.conjugate() + p_ratio * tp * tp.conjugate()) \
+        / (s_ratio + p_ratio)
     spectrum[thread_id + wls_size] = T.real

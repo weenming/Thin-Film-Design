@@ -4,8 +4,8 @@ import sys
 sys.path.append("./designer/script")
 import os
 import film as film
-import tmm.get_n as get_n
-import tmm.get_cpu.get_spectrum as get_spectrum_cpu
+import utils.get_n as get_n
+import tmm.tmm_cpu.get_spectrum as get_spectrum_cpu
 
 import matplotlib.pyplot as plt
 

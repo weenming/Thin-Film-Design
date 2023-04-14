@@ -1,5 +1,4 @@
 import numpy as np
-from film import Film
 import tmm.get_spectrum as get_spectrum
 from abc import ABC, abstractmethod
 
@@ -69,14 +68,14 @@ class SpectrumSimple(BaseSpectrum):
         this spectrum is updated in regard to the current film structure.
     """
 
-    def __init__(self, incident_angle, wavelengths, film: Film):
+    def __init__(self, incident_angle, wavelengths, film):
         self.INC_ANG = incident_angle
         self.WLS = wavelengths
         self.n = film.calculate_n_array(self.WLS)
         self.n_sub = film.calculate_n_sub(self.WLS)
         self.n_inc = film.calculate_n_inc(self.WLS)
         self.spec = np.empty(self.WLS.shape[0] * 2)
-        self.film: Film = film
+        self.film = film
         self.updated = False
 
     def update_n(self):
@@ -89,7 +88,7 @@ class SpectrumSimple(BaseSpectrum):
             self.spec,
             self.WLS,
             self.film.get_d(),
-            self.n,
+            self.film.calculate_n_array(self.WLS),
             self.n_sub,
             self.n_inc,
             self.INC_ANG

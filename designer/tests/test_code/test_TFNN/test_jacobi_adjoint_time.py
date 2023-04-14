@@ -9,13 +9,14 @@ import film as film
 import spectrum
 import utils.get_n as get_n
 import tmm.get_jacobi_adjoint as get_jacobi
+from tmm.get_jacobi_n_adjoint import get_jacobi_free_form
 import tmm.tmm_cpu.get_jacobi as get_jacobi_cpu
 import timeit
 from optimizer.grad_helper import stack_J, stack_init_params
 import matplotlib.pyplot as plt
 
 
-def jacobi_GPU(layer_number):
+def jacobi_adjoint_GPU(layer_number):
     np.random.seed(1)
     d_expected = np.random.random(layer_number) * 100
 
@@ -30,6 +31,23 @@ def jacobi_GPU(layer_number):
     jacobi = np.empty((wls.shape[0] * 2, layer_number))
     get_jacobi.get_jacobi_simple(jacobi, wls, f.get_d(),
                                  f.spectrums[0].n, f.spectrums[0].n_sub, f.spectrums[0].n_inc, inc_ang, jacobi.shape[1])
+
+
+def jacobi_n_adjoint_GPU(layer_number):
+    np.random.seed(1)
+    d_expected = np.random.random(layer_number) * 100
+
+    substrate = A = "SiO2"
+    B = "TiO2"
+    f = film.TwoMaterialFilm(A, B, substrate, d_expected)
+    # must set spec before calculating spec
+    inc_ang = 60.  # incident angle in degree
+    wls = np.linspace(500, 1000, 500)
+    f.add_spec_param(inc_ang, wls)
+
+    jacobi = np.empty((wls.shape[0] * 2, layer_number))
+    get_jacobi_free_form(jacobi, wls, f.get_d(),
+                         f.spectrums[0].n, f.spectrums[0].n_sub, f.spectrums[0].n_inc, inc_ang)
 
 
 def jacobi_CPU(layer_number):
@@ -52,7 +70,7 @@ def jacobi_CPU(layer_number):
 def dif_n(layer_number):
     N = 1
     t_gpu = timeit.timeit(
-        f"jacobi_GPU({layer_number})", number=N, setup="from __main__ import jacobi_GPU")
+        f"jacobi_adjoint_GPU({layer_number})", number=N, setup="from __main__ import jacobi_adjoint_GPU")
     print(f"GPU, spectrum 500 wls: {t_gpu / N}")
 
     t_cpu = timeit.timeit(
@@ -65,10 +83,14 @@ def dif_n(layer_number):
 def dif_n_GPU(layer_number):
     N = 1
     t_gpu = timeit.timeit(
-        f"jacobi_GPU({layer_number})", number=N, setup="from __main__ import jacobi_GPU")
-    print(f"GPU, spectrum 500 wls: {t_gpu / N}, {layer_number} layers")
+        f"jacobi_adjoint_GPU({layer_number})", number=N, setup="from __main__ import jacobi_adjoint_GPU")
+    print(f"GPU adjoint, spectrum 500 wls: {t_gpu / N}, {layer_number} layers")
+    t_n_GPU = timeit.timeit(
+        f"jacobi_n_adjoint_GPU({layer_number})", number=N, setup="from __main__ import jacobi_n_adjoint_GPU")
+    print(
+        f"GPU adjoint w.r.t. n, spectrum 500 wls: {t_n_GPU / N}, {layer_number} layers")
 
-    return t_gpu / N
+    return t_gpu / N, t_n_GPU / N
 
 
 def plot_time():
@@ -110,19 +132,21 @@ def plot_time_GPU():
 
     # start testing at different layer numbers
     # NOTE: max layer number is set in gets.get_jacobi
-    Ns = np.array(range(10, 20000, 100))
+    Ns = np.array(range(10, 5000, 100))
     print(Ns)
     Ts_GPU = []
+    Ts_n_GPU = []
     for i in Ns:
-        g = dif_n_GPU(i)
+        g, n = dif_n_GPU(i)
         Ts_GPU.append(g)
-
+        Ts_n_GPU.append(n)
     k_gpu, b_gpu = np.polyfit(Ns, Ts_GPU, 1)
     N_e = np.linspace(0, Ns[-1], 1000)
 
     fig, ax = plt.subplots(1, 1)
-    ax.scatter(Ns, Ts_GPU, label='GPU', marker='x')
-    ax.plot(N_e, k_gpu * N_e + b_gpu, label='GPU fit')
+    ax.scatter(Ns, Ts_GPU, label='$\\tau$' + ', GPU', marker='x')
+    ax.scatter(Ns, Ts_n_GPU, label='n, GPU', marker='x')
+    ax.plot(N_e, k_gpu * N_e + b_gpu, label='$\\tau$' + ' ,fit')
     ax.legend()
     ax.set_xlabel("layer number")
     ax.set_ylabel("time / s")
@@ -218,6 +242,7 @@ def test_helper():
 
 if __name__ == "__main__":
     # warm up
-    jacobi_GPU(100)
+    jacobi_adjoint_GPU(100)
+    jacobi_n_adjoint_GPU(100)
 
     plot_time_GPU()

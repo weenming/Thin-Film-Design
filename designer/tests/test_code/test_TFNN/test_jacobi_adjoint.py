@@ -26,7 +26,7 @@ class TestJacobi(unittest.TestCase):
 
         jacobi = np.empty((wls.shape[0] * 2, 30))
         get_jacobi.get_jacobi_simple(jacobi, wls, f.get_d(),
-                                     f.spectrums[0].n, f.spectrums[0].n_sub, f.spectrums[0].n_inc, inc_ang, jacobi.shape[1])
+                                     f.spectrums[0].n, f.spectrums[0].n_sub, f.spectrums[0].n_inc, inc_ang)
 
         # read expected spec from file
         # count relative path from VS Code project root.....
@@ -54,7 +54,7 @@ class TestJacobi(unittest.TestCase):
 
         jacobi = np.empty((wls.shape[0] * 2, layers))
         get_jacobi.get_jacobi_simple(jacobi, wls, f.get_d(),
-                                     f.spectrums[0].n, f.spectrums[0].n_sub, f.spectrums[0].n_inc, inc_ang, jacobi.shape[1])
+                                     f.spectrums[0].n, f.spectrums[0].n_sub, f.spectrums[0].n_inc, inc_ang)
 
 
 def test_film_jacobi_debug():
@@ -72,11 +72,11 @@ def test_film_jacobi_debug():
 
     jacobi = np.empty((wls.shape[0] * 2, layer))
     get_jacobi.get_jacobi_simple(jacobi, wls, f.get_d(),
-                                 f.spectrums[0].n, f.spectrums[0].n_sub, f.spectrums[0].n_inc, inc_ang, jacobi.shape[1])
+                                 f.spectrums[0].n, f.spectrums[0].n_sub, f.spectrums[0].n_inc, inc_ang)
 
     print(jacobi)
 
 
 if __name__ == "__main__":
-    # test_film_jacobi_debug()
-    unittest.main()
+    test_film_jacobi_debug()
+    # unittest.main()

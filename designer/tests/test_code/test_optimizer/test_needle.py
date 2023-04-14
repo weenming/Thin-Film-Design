@@ -7,21 +7,21 @@ import time
 
 import sys
 sys.path.append('./designer/script/')
-from film import FilmSimple
+from film import TwoMaterialFilm
 from spectrum import Spectrum
 from optimizer.needle_insert import make_test_insert_film, insert_1_layer, get_insert_grad
-from design import Design
+from design import DesignSimple
 
 
 class TestNeedle(unittest.TestCase):
 
     def test_make_insert_film(self):
-        f = FilmSimple('SiO2', 'TiO2', 'SiO2', np.array([1., 2., 3.]))
+        f = TwoMaterialFilm('SiO2', 'TiO2', 'SiO2', np.array([1., 2., 3.]))
         insert_idx = make_test_insert_film(f, 2)
         self.assertListEqual(list(f.get_d()), [0.5, 0, 0.5, 0., 0., 1, 0., 1, 0., 0., 1.5, 0., 1.5, 0., 0.])
         self.assertListEqual(insert_idx, [1, 3, 6, 8, 11, 13])
 
-        f = FilmSimple('SiO2', 'TiO2', 'SiO2', np.array([3.]))
+        f = TwoMaterialFilm('SiO2', 'TiO2', 'SiO2', np.array([3.]))
         insert_idx = make_test_insert_film(f, 2)
         self.assertListEqual(list(f.get_d()), [1.5, 0., 1.5, 0., 0.])
         self.assertListEqual(insert_idx, [1, 3])
@@ -37,7 +37,7 @@ class TestNeedle(unittest.TestCase):
 
         for search_pts in [10, 50]:
 
-            f = FilmSimple('SiO2', 'TiO2', 'SiO2', np.array([100., 200., 300.]))
+            f = TwoMaterialFilm('SiO2', 'TiO2', 'SiO2', np.array([100., 200., 300.]))
             target_spec_ls = [Spectrum(0., np.linspace(400, 1000, 500), np.ones(500, dtype='float'))]
             idx, grad = self.search_insert_helper(f, target_spec_ls, search_pts)
 
@@ -46,7 +46,7 @@ class TestNeedle(unittest.TestCase):
             # plt.show()
 
 
-    def search_insert_helper(self, f: FilmSimple, target_ls, search_pts):
+    def search_insert_helper(self, f: TwoMaterialFilm, target_ls, search_pts):
         layer_before = f.get_layer_number()
         t1 = time.time()
         idx = make_test_insert_film(f, search_pts)

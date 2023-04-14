@@ -2,14 +2,14 @@
 import numpy as np
 from tmm.get_jacobi import get_jacobi_simple
 from tmm.get_spectrum import get_spectrum_simple
-
-from film import FilmSimple
+from typing import Sequence
+from film import TwoMaterialFilm
 from spectrum import BaseSpectrum, Spectrum
 
 
 def stack_init_params(
-    film: FilmSimple,
-    target_spec_ls: list[Spectrum],
+    film: TwoMaterialFilm,
+    target_spec_ls: Sequence[BaseSpectrum],
 ):
     # stack parameters & preparations
     n_arrs_ls = []
@@ -30,9 +30,9 @@ def stack_init_params(
 
 def stack_f(
     f_old,
-    n_arrs_ls: list[list[np.array]],
+    n_arrs_ls: Sequence[Sequence[np.typing.NDArray]],
     d,
-    target_spec_ls: list[BaseSpectrum],
+    target_spec_ls: Sequence[BaseSpectrum],
     spec_batch_idx=None,
     wl_batch_idx=None,
     get_f=get_spectrum_simple,
@@ -58,7 +58,7 @@ def stack_f(
             layer number
     """
     if spec_batch_idx is None:
-        spec_batch_idx = list(range(len(target_spec_ls))) 
+        spec_batch_idx = list(range(len(target_spec_ls)))
 
     wl_idx = 0
     for i, (s, n_arrs) in enumerate(zip(target_spec_ls, n_arrs_ls)):
@@ -80,9 +80,8 @@ def stack_f(
         )
 
         # should not create new arr.
-        f_old[wl_idx         : wl_idx + wl_num] -= s.get_R()[wl_batch_idx]
+        f_old[wl_idx: wl_idx + wl_num] -= s.get_R()[wl_batch_idx]
         f_old[wl_idx + wl_num: wl_idx + wl_num * 2] -= s.get_T()[wl_batch_idx]
-
 
         wl_idx += wl_num
     return
@@ -91,8 +90,8 @@ def stack_f(
 def stack_J(
     J_old,
     n_arrs_ls,
-    d: np.array,
-    target_spec_ls: list[BaseSpectrum],
+    d: np.typing.NDArray,
+    target_spec_ls: Sequence[BaseSpectrum],
     get_J=get_jacobi_simple,
     MAX_LAYER_NUMBER=250,
     spec_batch_idx=None,
@@ -121,13 +120,14 @@ def stack_J(
         wl_count = 0
         for i, (s, n_arrs) in enumerate(zip(target_spec_ls, n_arrs_ls)):
 
-            wl_num = wl_batch_idx.shape[0] # R and T: wbatch can be 2 #wl long
+            wl_num = wl_batch_idx.shape[0]  # R and T: wbatch can be 2 #wl long
 
             if i not in spec_batch_idx:  # for SGD
                 continue
 
             get_J(
-                J_old[wl_count: wl_count + wl_num * 2, d_count: d_count_next],  # R & T
+                J_old[wl_count: wl_count + wl_num * 2,
+                      d_count: d_count_next],  # R & T
                 s.WLS[wl_batch_idx],
                 d[d_count: d_count_next],
                 n_arrs[0][wl_batch_idx, d_count: d_count_next],

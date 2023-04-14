@@ -1,5 +1,7 @@
 {
     "python.analysis.extraPaths": [
         "./designer/script"
-    ]
+    ],
+    "python.linting.mypyEnabled": true,
+    "python.linting.enabled": true
 }

@@ -4,10 +4,10 @@ sys.path.append('./designer/script/')
 import numpy as np
 import copy
 
-from film import FilmSimple
+from film import TwoMaterialFilm
 from spectrum import BaseSpectrum
 from optimizer.LM_gradient_descent import stack_f, stack_J
 
 
-def genetic(film: FilmSimple):
+def genetic(film: TwoMaterialFilm):
     raise NotImplementedError

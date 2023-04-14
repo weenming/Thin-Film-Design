@@ -13,12 +13,12 @@ import matplotlib.pyplot as plt
 def spec_gpu(layer_number):
     np.random.seed(1)
     d_expected = np.random.random(layer_number) * 100
-    
+
     substrate = A = "SiO2"
     B = "TiO2"
-    f = film.FilmSimple(A, B, substrate, d_expected)
+    f = film.TwoMaterialFilm(A, B, substrate, d_expected)
     # must set spec before calculating spec
-    inc_ang = 60. # incident angle in degree
+    inc_ang = 60.  # incident angle in degree
     wls = np.linspace(500, 1000, 500)
 
     # calculate
@@ -27,33 +27,37 @@ def spec_gpu(layer_number):
 
 
 def spec_cpu(layer_number):
-    
+
     # layer number must be even
     assert layer_number % 2 == 0
-    
+
     np.random.seed(1)
     d_expected = np.random.random(layer_number) * 100
-    
+
     substrate = A = "SiO2"
     B = "TiO2"
-    f = film.FilmSimple(A, B, substrate, d_expected)
+    f = film.TwoMaterialFilm(A, B, substrate, d_expected)
     # must set spec before calculating spec
-    inc_ang = 60. # incident angle in degree
+    inc_ang = 60.  # incident angle in degree
     wls = np.linspace(500, 1000, 500)
 
     materials = np.array([A, B] * (layer_number // 2))
     # calculate
     get_spectrum_cpu.get_spectrum(wls, d_expected, materials, theta0=inc_ang)
 
+
 def dif_n(layer_number):
     N = 1
-    t_gpu = timeit.timeit(f"spec_gpu({layer_number})", number=N, setup="from __main__ import spec_gpu")
+    t_gpu = timeit.timeit(
+        f"spec_gpu({layer_number})", number=N, setup="from __main__ import spec_gpu")
     print(f"GPU, spectrum 500 wls: {t_gpu / N}")
-    
-    t_cpu = timeit.timeit(f"spec_cpu({layer_number})", number=N, setup="from __main__ import spec_cpu")
+
+    t_cpu = timeit.timeit(
+        f"spec_cpu({layer_number})", number=N, setup="from __main__ import spec_cpu")
     print(f"CPU, spectrum 500 wls: {t_cpu / N}")
 
     return t_gpu / N, t_cpu / N
+
 
 def plot_time():
     # compile first
@@ -68,7 +72,7 @@ def plot_time():
         g, c = dif_n(i)
         Ts_CPU.append(c)
         Ts_GPU.append(g)
-    
+
     k_cpu, b_cpu = np.polyfit(Ns, Ts_CPU, 1)
     k_gpu, b_gpu = np.polyfit(Ns, Ts_GPU, 1)
     N_e = np.linspace(0, Ns[-1], 100)
@@ -87,9 +91,11 @@ def plot_time():
     ax.set_xlim(0, Ns[-1])
     plt.show()
 
+
 if __name__ == "__main__":
     dif_n(2)
     dif_n(200)
     # keep gpu occupied?
-    t = timeit.timeit(f"spec_gpu({200})", number=100, setup="from __main__ import spec_gpu")
+    t = timeit.timeit(f"spec_gpu({200})", number=100,
+                      setup="from __main__ import spec_gpu")
     print(t)

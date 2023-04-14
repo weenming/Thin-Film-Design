@@ -11,11 +11,11 @@ d_expected = np.random.random(30) * 100
 
 substrate = A = "SiO2"
 B = "TiO2"
-f = film.FilmSimple(A, B, substrate, d_expected)
+f = film.TwoMaterialFilm(A, B, substrate, d_expected)
 # must set spec before calculating spec
-inc_ang = 60. # incident angle in degree
+inc_ang = 60.  # incident angle in degree
 wls = np.linspace(500, 1000, 500)
 f.add_spec_param(inc_ang, wls)
 f.calculate_spectrum()
 
-print(f.spectrum[0].get_R())
+print(f.spectrums[0].get_R())

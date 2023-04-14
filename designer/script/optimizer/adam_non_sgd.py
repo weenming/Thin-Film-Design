@@ -4,21 +4,22 @@ sys.path.append('./designer/script/')
 from optimizer.grad_helper_non_sgd import stack_f, stack_J, stack_init_params
 from utils.loss import calculate_RMS_f_spec
 from spectrum import BaseSpectrum
-from film import FilmSimple
+from film import TwoMaterialFilm
 import numpy as np
 
+
 def adam_optimize_non_sgd(
-        film: FilmSimple,
-        target_spec_ls: list[BaseSpectrum], 
-        max_steps, 
-        alpha=0.001, # stepsize TODO: fine tune this...
-        beta1 = 0.9, 
-        beta2 = 0.999, 
-        epsilon = 1e-8, 
-        record = False, 
-        show=False
-    ):
-    # Adapted from Kingma, Diederik P. and Jimmy Ba. 
+    film: TwoMaterialFilm,
+    target_spec_ls: list[BaseSpectrum],
+    max_steps,
+    alpha=0.001,  # stepsize TODO: fine tune this...
+    beta1=0.9,
+    beta2=0.999,
+    epsilon=1e-8,
+    record=False,
+    show=False
+):
+    # Adapted from Kingma, Diederik P. and Jimmy Ba.
     # "Adam: A Method for Stochastic Optimization." CoRR abs/1412.6980 (2014)
 
     # Prep: calculate refractive index & stack target spectrum into one array
@@ -40,7 +41,7 @@ def adam_optimize_non_sgd(
         g = J.T @ f
         m = beta1 * m + (1 - beta1) * g
         v = beta2 * v + (1 - beta2) * g ** 2
-        m_hat = m  / (1 - beta1)
+        m_hat = m / (1 - beta1)
         v_hat = v / (1 - beta2)
         d = d - alpha * m_hat / (np.sqrt(v_hat) + epsilon)
         # Project back to feasible domain
@@ -48,8 +49,9 @@ def adam_optimize_non_sgd(
         if record:
             losses.append(calculate_RMS_f_spec(film, target_spec_ls))
         if show:
-            print(f'iter {t}, loss {calculate_RMS_f_spec(film, target_spec_ls)}')
-        film.update_d(d)    
+            print(
+                f'iter {t}, loss {calculate_RMS_f_spec(film, target_spec_ls)}')
+        film.update_d(d)
         # if loss not decreasing, break
         try:
             if losses[-1] == losses[-2]:

@@ -1,9 +1,10 @@
 from numpy import *
 import numpy as np
+from numpy.typing import NDArray
 import scipy
 
 
-import importlib.resources as pkg_resources # python > 3.7
+import importlib.resources as pkg_resources  # python > 3.7
 from designer import material_data
 
 
@@ -11,20 +12,33 @@ from designer import material_data
 def get_n_SiO2(wl):
     return get_n_SiO2_Cauchy(wl)
 
+
 def get_n_TiO2(wl):
     return get_n_TiO2_Cauchy(wl)
+
 
 def get_n_Si(wl):
     return get_Si_exp(wl)
 
 
+def get_n_1(wl):
+    return wl / wl  # broadcast if is instance of np.array
+
+
+def get_n_2(wl):
+    return 2 * wl / wl
+
+def get_n_free(wl, n: complex):
+    return wl / wl * n
+
 
 def get_n_SiO2_Cauchy(wl):
-    wl = wl * 1e-3 # nm to \mu m
+    wl = wl * 1e-3  # nm to \mu m
     # SiO2: Ghosh 1999 crystal, alpha-quartz
     # NOTE: applicable to 198 nm - 2050 nm
     return np.sqrt(1.28604141 + 1.07044083 * wl**2 /
-                  (wl**2 - 0.0100585997) + 1.10202242 * wl**2 / (wl**2 - 100.))
+                   (wl**2 - 0.0100585997) + 1.10202242 * wl**2 / (wl**2 - 100.))
+
 
 def get_n_TiO2_Cauchy(wl):
     wl = wl * 1e-3
@@ -32,25 +46,26 @@ def get_n_TiO2_Cauchy(wl):
     # NOTE: applicable to 430 nm - 1530 nm
     return np.sqrt(5.913 + 0.2441 / (wl**2 - 0.0803))
 
+
 def get_n_Air(wl):
     # approximate
     return 1.
 
 
-def load_from_file(fname_n, fname_k) -> np.array:
+def load_from_file(fname_n, fname_k) -> tuple[NDArray, NDArray]:
     try:
         wls, n = np.loadtxt(
             pkg_resources.read_text(material_data, fname_n).split(),
-            dtype='float, float', 
-            skiprows=1, 
-            unpack=True, 
+            dtype='float, float',
+            skiprows=1,
+            unpack=True,
             delimiter=','
         )
         wls_2, k = np.loadtxt(
-            pkg_resources.read_text(material_data, fname_k).split(), 
-            dtype='float, float', 
-            skiprows=1, 
-            unpack=True, 
+            pkg_resources.read_text(material_data, fname_k).split(),
+            dtype='float, float',
+            skiprows=1,
+            unpack=True,
             delimiter=','
         )
     except Exception as e:
@@ -60,10 +75,12 @@ def load_from_file(fname_n, fname_k) -> np.array:
     # note: return wl in nm
     return wls * 1000, n - 1j * k
 
+
 cached_Si = False
 wls_Si = None
 n_Si = None
 n_Si_interp = None
+
 
 def get_Si_exp(wl):
     '''
@@ -85,6 +102,5 @@ def get_Si_exp(wl):
             'Si_k_Green-2008.csv'
         )
         n_Si_interp = scipy.interpolate.interp1d(wls_Si, n_Si)
-    
-    return n_Si_interp(wl)
 
+    return n_Si_interp(wl)

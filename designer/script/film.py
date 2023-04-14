@@ -1,16 +1,176 @@
 import numpy as np
+from numpy.typing import NDArray
 import copy
 import utils.get_n as get_n
-import spectrum
+from spectrum import SpectrumSimple
+from abc import ABC, abstractmethod
 
 
-class Film:
+class BaseFilm(ABC):
+    d: NDArray
+    spectrums: list[SpectrumSimple]
+
     def __init__(self):
-        self.d = np.array([])
-        self.n = np.array([], dtype='complex')
+        pass
+
+    # spectrum-related methods
+    def add_spec_param(self, inc_ang, wls):
+        """
+        Setter of the spectrum params: wls and inc
+
+        """
+
+        for s in self.spectrums:
+            if np.array_equal(s.WLS, wls) and s.INC_ANG == inc_ang:
+                return
+        spec = SpectrumSimple(inc_ang, wls, self)
+        self.spectrums.append(spec)
+        return spec
+
+    def remove_spec_param(self, inc_ang=None, wls=None):
+        assert wls is not None or inc_ang is not None, "Must specify which spec to del"
+        count = 0
+        for s in self.spectrums:
+            if (inc_ang is None and np.array_equal(s.WLS, wls)) or \
+                (wls is None and s.INC_ANG == inc_ang) or \
+                    (np.array_equal(s.WLS, wls) == s.INC_ANG == inc_ang):
+                self.spectrums.remove(s)
+                count += 1
+        return count
+
+    def get_spec(self, inc_ang=None, wls=None) -> SpectrumSimple:
+        """ return spectrum with specified wls and inc_ang
+        """
+        if len(self.spectrums) == 1 and inc_ang is None and wls is None:
+            # when only one spectrum, return the only one spectrum
+            return self.spectrums[0]
+
+        else:
+            if inc_ang is None or wls is None:
+                raise ValueError(
+                    "In the case of multiple spectrums, must specify inc_ang\
+                    and wls")
+            for s in self.spectrums:
+                if np.array_equal(s.WLS, wls) and s.INC_ANG == inc_ang:
+                    return s
+            # Not found, add to get_spec
+            # print("WARNING: spec not in this film's spec list. New spec added to film!")
+            return self.add_spec_param(inc_ang, wls)
+
+    def get_all_spec_list(self) -> list[SpectrumSimple]:
+        return self.spectrums
+
+    def calculate_spectrum(self):
+        for s in self.spectrums:
+            s.calculate()
+
+    # n_array related
+    @abstractmethod
+    def calculate_n_array(self, wls: NDArray):
+        raise NotImplementedError
+
+    def calculate_n_sub(self, wls):
+        """
+        calculate n at different wl for substrate
+
+        Returns:
+            1d NDArray, size is wls.shape[0]. Refractive indices
+        """
+        n_arr = np.empty(wls.shape[0], dtype='complex128')
+        for i in range(wls.shape[0]):
+            n_arr[i] = self.get_n_sub(wls[i])
+        return n_arr
+
+    def calculate_n_inc(self, wls):
+        """
+        calculate n at different wl for incident material
+
+        Returns:
+            1d NDArray, size is wls.shape[0]. Refractive indices
+
+        """
+        n_arr = np.empty(wls.shape[0], dtype='complex128')
+        for i in range(wls.shape[0]):
+            n_arr[i] = self.get_n_inc(wls[i])
+        return n_arr
+
+    # Accessor functions
+
+    def get_d(self):
+        return self.d
+
+    def update_d(self, d):
+        self.d = d
+        for spec in self.get_all_spec_list():
+            spec.update_n()  # calculate the n array again
+            spec.outdate()  # set the oudated flag of the stored spectrum(s)
+        return
+
+    def get_layer_number(self):
+        return self.d.shape[0]
+
+    @abstractmethod
+    def get_optical_thickness(self, wl, neglect_last_layer=False) -> float:
+        raise NotImplementedError
 
 
-class FilmSimple(Film):
+class FreeFormFilm(BaseFilm):
+    def __init__(
+        self,
+        init_n_arr: NDArray,
+        total_gt,
+        substrate: str,
+        incidence='Air',
+        allowed_materials=None
+    ):
+        '''
+            Specify a new FreeFormFilm.
+            NOTE: zero dispersion is assumed
+
+            Parameters:
+                init_n_arr:
+                    Every layers' refractive indix is relaxed to evolve 
+                    continuously
+                total_gt:
+                    total allowed geometric thickness. As described in \cite{}
+                    total thickness of a layer is a key constraint to the lower
+                    bound of the design loss.
+                    Layer thickness is determined based on an even subdivision
+                    w.r.t. geometrical thickness.
+                allowed_materials:
+                    A discrete set of materials that is allowed. One possible
+                    strategy to include with this constraint is a projection 
+                    after the optimization is complete.
+
+
+        '''
+        if allowed_materials is not None:
+            raise NotImplementedError
+        self.d = np.ones(init_n_arr.shape[0], dtype='float')
+        self.d *= total_gt / self.d
+        assert np.dtype(init_n_arr) == np.complex128, 'bad dtype for n'
+        self.n = init_n_arr
+        self.spectrums = []
+        try:
+            exec(f"self.get_n_sub = get_n.get_n_{substrate}")
+            exec(f"self.get_n_inc = get_n.get_n_{incidence}")
+        except:
+            raise ValueError(
+                "Material not found. \
+                    Dispersion must have been defined in gets.get_n")
+
+    def calculate_n_array(self, wls: NDArray):
+        n_arr = np.empty((wls.shape[0], self.get_layer_number()),
+                         dtype='complex128')
+        for i in range(self.get_layer_number()):
+            n_arr[:, i] = get_n.get_n_free(wls, self.n[i])
+        return n_arr
+
+    def get_optical_thickness(self, wl, neglect_last_layer=False) -> float:
+        return self.d * self.calculate_n_array(np.array([wl]))[:, 0]
+
+
+class TwoMaterialFilm(BaseFilm):
     """
     Film that consist of 2 materials. Only d is modifiable. Materials are
     non - absorbing。
@@ -43,8 +203,17 @@ class FilmSimple(Film):
 
 
     """
+    get_n_A: function
+    get_n_B: function
 
-    def __init__(self, A:str, B:str, substrate:str, d_init: np.array, incidence='Air'):
+    def __init__(
+        self,
+        A: str,
+        B: str,
+        substrate: str,
+        d_init: NDArray,
+        incidence='Air'
+    ):
         try:
             exec(f"self.get_n_A = get_n.get_n_{A}")
             exec(f"self.get_n_B = get_n.get_n_{B}")
@@ -52,70 +221,20 @@ class FilmSimple(Film):
             exec(f"self.get_n_inc = get_n.get_n_{incidence}")
         except:
             raise ValueError(
-                "Bad material. Dispersion must be specified in gets.get_n")
-        
+                "Material not found. \
+                    Dispersion must have been defined in gets.get_n")
+
         if d_init.shape == ():
             d_init = np.array([d_init])
 
         assert len(d_init.shape) == 1, "Should be 1 dim array!"
-    
+
         self.d = d_init
-        
-        self.spectrum = []
-
-    # Getter and Setter, etc of attribute spectrum
-    def add_spec_param(self, inc_ang, wls):
-        """
-        Setter of the spectrum params: wls and inc
-
-        """
-        for s in self.spectrum:
-            if np.array_equal(s.WLS, wls) and s.INC_ANG == inc_ang:
-                return
-        spec = spectrum.SpectrumSimple(inc_ang, wls, self)
-        self.spectrum.append(spec)
-        return spec
-
-    def remove_spec_param(self, inc_ang=None, wls=None):
-        assert wls is not None or inc_ang is not None, "Must specify which spec to del"
-        count = 0
-        for s in self.spectrum:
-            if (inc_ang is None and np.array_equal(s.WLS, wls)) or \
-                (wls is None and s.INC_ANG == inc_ang) or \
-                (np.array_equal(s.WLS, wls) == s.INC_ANG == inc_ang):
-                self.spectrum.remove(s)
-                count += 1
-        return count
-
-    def get_spec(self, inc_ang=None, wls=None) -> spectrum.SpectrumSimple:
-        """ return spectrum with specified wls and inc_ang
-        """
-        if len(self.spectrum) == 1 and inc_ang is None and wls is None:
-            # when only one spectrum, return the only one spectrum
-            return self.spectrum[0]
-
-        else:
-            if inc_ang is None or wls is None:
-                raise ValueError(
-                    "In the case of multiple spectrums, must specify inc_ang\
-                    and wls")
-            for s in self.spectrum:
-                if np.array_equal(s.WLS, wls) and s.INC_ANG == inc_ang:
-                    return s
-            # Not found, add to get_spec
-            # print("WARNING: spec not in this film's spec list. New spec added to film!")
-            return self.add_spec_param(inc_ang, wls)
-
-
-    def get_all_spec_list(self) -> list[spectrum.SpectrumSimple]:
-        return self.spectrum
-
-    def calculate_spectrum(self):
-        for s in self.spectrum:
-            s.calculate()
+        self.spectrums: list[SpectrumSimple] = []
 
     # all layers should have non-zero thickness, except right after insertion
     # so check by explicitly calling these methods
+
     def check_thickness(self):
         assert np.min(self.d) > 0, "layers of zero thickness!"
 
@@ -137,7 +256,14 @@ class FilmSimple(Film):
 
         self.update_d(d)
 
-    # Helper functions of insertion
+    def remove_thin_layers(self, d_min, method):
+
+        f_sub = copy.deepcopy(self)
+        method(f_sub, d_min)
+        return f_sub
+
+    # Helper functions of needle insertion
+
     def insert_layer(self, layer_index, position, thickness):
         """
         insert a layer at the specified position
@@ -150,7 +276,7 @@ class FilmSimple(Film):
         """
         d = self.get_d()
         assert 0 <= layer_index < d.shape[0], 'invalid insert layer'
-        
+
         assert d[layer_index] >= position - 1e-5 and position >= 0, \
             'invalid insert position'
 
@@ -158,7 +284,6 @@ class FilmSimple(Film):
         d[layer_index + 2] = max(d[layer_index] - position, 0)
         d[layer_index] = position
         self.update_d(d)
-
 
     def get_insert_layer_n(self, index):
         """
@@ -171,69 +296,26 @@ class FilmSimple(Film):
         else:
             return self.B
 
+    # Implement abstract methods
 
-    # Functions to calculate n at given wls
-    def calculate_n_array(self, wls: np.array):
+    def calculate_n_array(self, wls: NDArray):
         """
         calculate n at different wl for each layer.
 
         Returns:
-            2d np.array, size is wls number * layer number. Refractive indices
+            2d NDArray, size is wls number * layer number. Refractive indices
         """
-        n_arr = np.empty((wls.shape[0], self.get_layer_number()), dtype='complex128')
+        n_arr = np.empty(
+            (wls.shape[0], self.get_layer_number()), dtype='complex128')
 
-        n_A: np.array = self.get_n_A(wls)
-        n_B: np.array = self.get_n_B(wls)
+        n_A: NDArray = self.get_n_A(wls)
+        n_B: NDArray = self.get_n_B(wls)
         l = self.get_layer_number()
-        
+
         n_arr[:, [i for i in range(0, l, 2)]] = n_A.reshape((-1, 1))
         n_arr[:, [i for i in range(1, l, 2)]] = n_B.reshape((-1, 1))
         return n_arr
 
-
-    def calculate_n_sub(self, wls):
-        """
-        calculate n at different wl for substrate
-
-        Returns:
-            1d np.array, size is wls.shape[0]. Refractive indices
-        """
-        n_arr = np.empty(wls.shape[0], dtype='complex128')
-        for i in range(wls.shape[0]):
-            n_arr[i] = self.get_n_sub(wls[i])
-        return n_arr
-
-    def calculate_n_inc(self, wls):
-        """
-        calculate n at different wl for incident material
-
-        Returns:
-            1d np.array, size is wls.shape[0]. Refractive indices
-
-        """
-        n_arr = np.empty(wls.shape[0], dtype='complex128')
-        for i in range(wls.shape[0]):
-            n_arr[i] = self.get_n_inc(wls[i])
-        return n_arr
-
-
-    # Accessor functions
-    def get_d(self):
-        return self.d
-
-    def update_d(self, d):
-        self.d = d
-        for spec in self.get_all_spec_list():
-            spec.update_n() # calculate the n array again
-            spec.outdate() # set the oudated flag of the stored spectrum(s)
-        
-        return
-
-    def get_layer_number(self):
-        return self.d.shape[0]
-
-
-    # Other utility functions
     def get_optical_thickness(self, wl, neglect_last_layer=False) -> float:
         """
         Calculate the optical thickness of this film
@@ -247,15 +329,7 @@ class FilmSimple(Film):
         n_B = self.get_n_B(wl)
         d_even = np.array([self.get_d()[i] for i in range(0, l, 2)])
         d_odd = np.array([self.get_d()[i] for i in range(1, l, 2)])
-        ot = np.sum(n_A * d_even) + np.sum(n_B * d_odd)            
+        ot = np.sum(n_A * d_even) + np.sum(n_B * d_odd)
         if neglect_last_layer:
             ot -= self.get_d()[-1] * (n_A if l % 2 == 1 else n_B)
         return ot
-
-
-    def remove_thin_layers(self, d_min, method):
-
-        f_sub = copy.deepcopy(self)
-        method(f_sub, d_min)
-        return f_sub
-

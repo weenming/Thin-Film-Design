@@ -4,6 +4,7 @@ import copy
 import utils.get_n as get_n
 from spectrum import SpectrumSimple
 from abc import ABC, abstractmethod
+from typing import Callable
 
 
 class BaseFilm(ABC):
@@ -148,7 +149,7 @@ class FreeFormFilm(BaseFilm):
             raise NotImplementedError
         self.d = np.ones(init_n_arr.shape[0], dtype='float')
         self.d *= total_gt / self.d
-        assert np.dtype(init_n_arr) == np.complex128, 'bad dtype for n'
+        init_n_arr = init_n_arr.astype('complex128')
         self.n = init_n_arr
         self.spectrums = []
         try:
@@ -168,6 +169,14 @@ class FreeFormFilm(BaseFilm):
 
     def get_optical_thickness(self, wl, neglect_last_layer=False) -> float:
         return self.d * self.calculate_n_array(np.array([wl]))[:, 0]
+
+    def update_n(self, n_new):
+        self.n = n_new
+        for s in self.get_all_spec_list():
+            s.outdate()
+
+    def get_n(self):
+        return self.n
 
 
 class TwoMaterialFilm(BaseFilm):
@@ -203,8 +212,8 @@ class TwoMaterialFilm(BaseFilm):
 
 
     """
-    get_n_A: function
-    get_n_B: function
+    get_n_A: Callable
+    get_n_B: Callable
 
     def __init__(
         self,

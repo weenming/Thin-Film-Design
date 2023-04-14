@@ -13,7 +13,6 @@ def get_jacobi_free_form(
     n_sub,
     n_inc,
     inc_ang,
-    total_layer_number,
     s_ratio=1,
     p_ratio=1
 ):
@@ -67,7 +66,6 @@ def get_jacobi_free_form(
     # allocate space for Jacobi matrix
     jacobi_device = cuda.device_array(
         (wls_size * 2, layer_number),
-        strides=(8 * total_layer_number, 8),
         dtype="float64"
     )
 
@@ -142,12 +140,7 @@ def forward_and_backward_propagation(
     cos_inc = cmath.cos(inc_ang)
     cos_sub = cmath.sqrt(1 - ((n_inc / n_sub) * cmath.sin(inc_ang)) ** 2)
 
-    # choose cos from arr of size 2.
-    # Use local array which is private to thread
-    cos_arr = cuda.local.array(layer_number, dtype="complex128")
-    for i in range(layer_number):
-        cos_arr[i] = cmath.sqrt(
-            1 - ((n_inc / n_arr[i]) * cmath.sin(inc_ang)) ** 2)
+    # calculate n_arr in real time
 
     '''
     FORWARD PROPAGATION
@@ -165,7 +158,8 @@ def forward_and_backward_propagation(
     Mp = cuda.local.array((2, 2), dtype="complex128")
 
     for i in range(layer_number):
-        calc_M(Ms, Mp, cos_arr[i], n_arr[i], d[i], wl)
+
+        calc_M(Ms, Mp, n_inc, inc_ang, n_arr[i], d[i], wl)
         mul_right(W_back_s, Ms)
         mul_right(W_back_p, Mp)
 
@@ -180,13 +174,10 @@ def forward_and_backward_propagation(
     # Note that spectrum is array on device
     rs = W_back_s[1, 0] / W_back_s[0, 0]
     rp = W_back_p[1, 0] / W_back_p[0, 0]
-    R = (rs * rs.conjugate() + rp * rp.conjugate()) / 2
 
     # T should be R - 1
     ts = 1 / W_back_s[0, 0]
     tp = 1 / W_back_p[0, 0]
-    T = cos_sub / cos_inc * n_sub * (
-        ts * ts.conjugate() + tp * tp.conjugate()) / 2
 
     '''
     BACKWARD PROPAGATION
@@ -216,7 +207,7 @@ def forward_and_backward_propagation(
     fill_arr(
         partial_Ws_T,
         ts.conjugate() * (-1 / W_back_s[0, 0] ** 2) *
-            (cos_sub / cos_inc * n_sub).real,
+            (cos_sub / cos_inc * n_sub),
         0,
         0,
         0
@@ -224,7 +215,7 @@ def forward_and_backward_propagation(
     fill_arr(
         partial_Wp_T,
         tp.conjugate() * (-1 / W_back_p[0, 0] ** 2) *
-            (cos_sub / cos_inc * n_sub).real,
+            (cos_sub / cos_inc * n_sub),
         0,
         0,
         0
@@ -252,7 +243,7 @@ def forward_and_backward_propagation(
     mul_left(Mp_inv, W_back_p)
 
     # special case: first layer
-    calc_M_inv(Ms_inv, Mp_inv, cos_arr[0], n_arr[0], d[0], wl)
+    calc_M_inv(Ms_inv, Mp_inv, n_inc, inc_ang, n_arr[0], d[0], wl)
     mul_left(Ms_inv, W_back_s)  # M_0^-1 to left
     mul_left(Mp_inv, W_back_p)  # M_0^-1 to left
 
@@ -261,7 +252,7 @@ def forward_and_backward_propagation(
         # (first layer with material A is the 0-th layer)
 
         calc_partial_n_M(partial_n_Ms, partial_n_Mp,
-                         cos_arr[i], n_arr[i], d[i], wl)
+                         n_inc, inc_ang, n_arr[i], d[i], wl)
 
         mul_to(W_front_s, partial_n_Ms, tmp_res_s)
         mul_to(tmp_res_s, W_back_s, tmp_res_s)
@@ -277,24 +268,29 @@ def forward_and_backward_propagation(
 
         partial_n_Ts = hadm_mul(tmp_res_s, partial_Ws_T)
         partial_n_Tp = hadm_mul(tmp_res_p, partial_Wp_T)
+
+        ##############
+        # DEBUG:
+        ##############
+
         jacobi[thread_id + wls_size, i] = \
             (partial_n_Ts * s_ratio + partial_n_Tp *
              p_ratio).real / (s_ratio + p_ratio)
 
         # update W_back and W_front
-        calc_M_inv(Ms_inv, Mp_inv, cos_arr[(
-            i + 1)], n_arr[(i + 1)], d[i + 1], wl)
+        calc_M_inv(Ms_inv, Mp_inv, n_inc, inc_ang,
+                   n_arr[i + 1], d[i + 1], wl)
         mul_left(Ms_inv, W_back_s)  # M_0^-1 to left
         mul_left(Mp_inv, W_back_p)  # M_0^-1 to left
 
-        calc_M(Ms, Mp, cos_arr[i], n_arr[i], d[i], wl)
+        calc_M(Ms, Mp, n_inc, inc_ang, n_arr[i], d[i], wl)
         mul_right(W_front_s, Ms)  # M_0^-1 to left
         mul_right(W_front_p, Mp)  # M_0^-1 to left
 
     # special case: last layer!
     i = layer_number - 1
     calc_partial_n_M(partial_n_Ms, partial_n_Mp,
-                     cos_arr[i], n_arr[i], d[i], wl)
+                     n_inc, inc_ang, n_arr[i], d[i], wl)
 
     mul_to(W_front_s, partial_n_Ms, tmp_res_s)
     mul_to(tmp_res_s, W_back_s, tmp_res_s)
@@ -314,38 +310,42 @@ def forward_and_backward_propagation(
 
 
 @cuda.jit
-def calc_M(Ms, Mp, cosi, ni, di, wl):
+def calc_M(Ms, Mp, n_inc, inc_ang, ni, di, wl):
 
-    phi = 2 * cmath.pi * 1j * cosi * ni * di / wl
+    costheta = cmath.sqrt(
+        1 - ((n_inc / ni) * cmath.sin(inc_ang)) ** 2)
+    phi = 2 * cmath.pi * 1j * costheta * ni * di / wl
     coshi = cmath.cosh(phi)
     sinhi = cmath.sinh(phi)
 
     Ms[0, 0] = coshi
-    Ms[0, 1] = sinhi / cosi / ni
-    Ms[1, 0] = cosi * ni * sinhi
+    Ms[0, 1] = sinhi / costheta / ni
+    Ms[1, 0] = costheta * ni * sinhi
     Ms[1, 1] = coshi
 
     Mp[0, 0] = coshi
-    Mp[0, 1] = sinhi * ni / cosi
-    Mp[1, 0] = cosi / ni * sinhi
+    Mp[0, 1] = sinhi * ni / costheta
+    Mp[1, 0] = costheta / ni * sinhi
     Mp[1, 1] = coshi
 
 
 @cuda.jit
-def calc_M_inv(Ms, Mp, cosi, ni, di, wl):
+def calc_M_inv(Ms, Mp, n_inc, inc_ang, ni, di, wl):
+    costheta = cmath.sqrt(
+        1 - ((n_inc / ni) * cmath.sin(inc_ang)) ** 2)
 
-    phi = 2 * cmath.pi * 1j * cosi * ni * di / wl
+    phi = 2 * cmath.pi * 1j * costheta * ni * di / wl
     coshi = cmath.cosh(phi)
     sinhi = cmath.sinh(phi)
 
     Ms[0, 0] = coshi
-    Ms[0, 1] = -sinhi / cosi / ni
-    Ms[1, 0] = -cosi * ni * sinhi
+    Ms[0, 1] = -sinhi / costheta / ni
+    Ms[1, 0] = -costheta * ni * sinhi
     Ms[1, 1] = coshi
 
     Mp[0, 0] = coshi
-    Mp[0, 1] = -sinhi * ni / cosi
-    Mp[1, 0] = -cosi / ni * sinhi
+    Mp[0, 1] = -sinhi * ni / costheta
+    Mp[1, 0] = -costheta / ni * sinhi
     Mp[1, 1] = coshi
 
 
@@ -358,10 +358,29 @@ def fill_arr(A, a00, a01, a10, a11):
 
 
 @cuda.jit
-def calc_partial_n_M(res_mat_s, res_mat_p, cosi, ni, di, wl):
+def calc_partial_n_M(res_mat_s, res_mat_p, n_inc, inc_ang, ni, di, wl):
+    '''
+        theta: incident angle at i-th layer
+        phi: phase
+    '''
 
-    phi = 2 * cmath.pi * 1j * cosi * ni * di / wl
-    coshi = cmath.cosh(phi)
-    sinhi = cmath.sinh(phi)
+    costheta = cmath.sqrt(
+        1 - ((n_inc / ni) * cmath.sin(inc_ang)) ** 2)
 
-    raise NotImplementedError
+    phi = 2 * cmath.pi * costheta * ni * di / wl
+    cosphi = cmath.cos(phi)
+    sinphi = cmath.sin(phi)
+    res_mat_s[0, 0] = - (di * sinphi) / (wl * cosphi)
+    res_mat_s[0, 1] = 2 * 1j * ni * \
+        ((di * cosphi) / (2 * wl * ni ** 2 * costheta ** 2) -
+         (sinphi) / (2 * ni ** 3 * costheta ** 3))
+    res_mat_s[1, 0] = 1j * ni * \
+        ((di * cosphi) / (wl) + (sinphi) / (ni * costheta))
+    res_mat_s[1, 1] = - (di * sinphi) / (wl * costheta)
+
+    res_mat_p[0, 0] = - (di * sinphi) / (wl * cosphi)
+    res_mat_p[0, 1] = 1j * ni ** 2 * ((di * cosphi * ni) / wl +
+                            ((-1 + 2 * costheta ** 2) * sinphi) / costheta)
+    res_mat_p[1, 0] = 1j * ((di * cosphi) / (wl * ni) -
+                            (costheta * sinphi) / (ni ** 2))
+    res_mat_p[1, 1] = - (di * sinphi) / (wl * cosphi)

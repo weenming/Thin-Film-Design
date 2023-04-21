@@ -136,20 +136,29 @@ class NeedleDesign(BaseDesign):
 
 
 class ThicknessGradientDesign(BaseDesign):
-    def adam_gd(self, step, **kwargs):
-
-        losses, films = adam_optimize(
-            self.film,
-            self.target_specs,
-            step,
-            **kwargs
-        )
-        for i, (loss, film) in enumerate(zip(losses, films)):
-            self.training_info.append({
-                'loss': loss,
-                'film': film,
-                'step': i
-            })
+    def adam_gd(self, step, record=True, **kwargs):
+        if record:
+            losses, films = adam_optimize(
+                self.film,
+                self.target_specs,
+                step,
+                record=record,
+                **kwargs
+            )
+            for i, (loss, film) in enumerate(zip(losses, films)):
+                self.training_info.append({
+                    'loss': loss,
+                    'film': film,
+                    'step': i
+                })
+        else:
+            adam_optimize(
+                self.film,
+                self.target_specs,
+                step,
+                record,
+                **kwargs
+            )
 
 
 class FreeFormDesign(BaseDesign):

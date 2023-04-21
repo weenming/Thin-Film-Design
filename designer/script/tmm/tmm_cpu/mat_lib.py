@@ -1,6 +1,5 @@
-from numba import cuda
 
-@cuda.jit
+
 def mul_right(mat1, mat2):
     """
     Multiply two 2 * 2 matrices and SAVE TO THE FIRST MATRIX!
@@ -15,8 +14,8 @@ def mul_right(mat1, mat2):
     mat1[0, 1] = a01
     mat1[1, 0] = a10
     mat1[1, 1] = a11
-    
-@cuda.jit
+
+
 def mul_left(mat1, mat2):
     """
     Multiply two 2 * 2 matrices and SAVE TO THE SECOND MATRIX!
@@ -32,7 +31,7 @@ def mul_left(mat1, mat2):
     mat2[1, 0] = a10
     mat2[1, 1] = a11
 
-@cuda.jit
+
 def mul_to(mat1, mat2, dest):
     """
     Multiply two 2 * 2 matrices (mat1 @ mat2) and save to dest
@@ -48,7 +47,6 @@ def mul_to(mat1, mat2, dest):
     dest[1, 1] = a11
 
 
-@cuda.jit
 def hadm_mul(mat1, mat2):
     """
     Element-wise product, or Hadamard product of two 2 * 2 matrices
@@ -57,7 +55,6 @@ def hadm_mul(mat1, mat2):
         mat1[1, 0] * mat2[1, 0] + mat1[1, 1] * mat2[1, 1]
 
 
-@cuda.jit
 def tsp(mat, dest):
     """
     Transpose 2 * 2 matrix mat and save to dest

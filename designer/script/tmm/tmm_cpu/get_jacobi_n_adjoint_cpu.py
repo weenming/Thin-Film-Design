@@ -1,11 +1,9 @@
 import numpy as np
 import cmath
-from numba import cuda
-from tmm.mat_lib import mul_to, mul_right, mul_left, hadm_mul  # multiply
-from tmm.mat_lib import tsp  # transpose
+from tmm.tmm_cpu.mat_lib import mul_to, mul_right, mul_left, hadm_mul
 
 
-def get_jacobi_free_form(
+def get_jacobi_free_form_cpu(
     jacobi,
     wls,
     d,
@@ -57,42 +55,26 @@ def get_jacobi_free_form(
     # Maybe allowing it to pass in additional device arr would be a good idea
 
     # copy wls, d, n_layers, n_sub, n_inc, inc_ang to GPU
-    wls_device = cuda.to_device(wls)
-    d_device = cuda.to_device(d)
-    n_layers_device = cuda.to_device(n_layers)
-    n_sub_device = cuda.to_device(n_sub)
-    n_inc_device = cuda.to_device(n_inc)
 
-    # allocate space for Jacobi matrix
-    jacobi_device = cuda.device_array(
-        (wls_size * 2, layer_number),
-        dtype="float64"
-    )
-
-    # invoke kernel
-    block_size = 16  # threads per block
-    grid_size = (wls_size + block_size - 1) // block_size  # blocks per grid
-
-    forward_and_backward_propagation[grid_size, block_size](
-        jacobi_device,
-        wls_device,
-        d_device,
-        n_layers_device,
-        n_sub_device,
-        n_inc_device,
-        inc_ang_rad,
-        wls_size,
-        layer_number,
-        s_ratio,
-        p_ratio
-    )
-    cuda.synchronize()
-    # copy to pre-allocated space
-    jacobi_device.copy_to_host(jacobi)
+    for i in range(wls.shape[0]):
+        forward_and_backward_propagation(
+            i,
+            jacobi,
+            wls,
+            d,
+            n_layers,
+            n_sub,
+            n_inc,
+            inc_ang_rad,
+            wls_size,
+            layer_number,
+            s_ratio,
+            p_ratio
+        )
 
 
-@cuda.jit
 def forward_and_backward_propagation(
+    thread_id,
     jacobi,
     wls,
     d,
@@ -125,13 +107,9 @@ def forward_and_backward_propagation(
         layer_number:
             number of layers
     """
-    thread_id = cuda.grid(1)
-    # check this thread is valid
-    if thread_id > wls_size - 1:
-        return
-    # each thread calculates one wl
-    wl = wls[thread_id]
+
     # inc_ang is already in rad
+    wl = wls[thread_id]
     n_arr = n_layers[thread_id, :]
     n_sub = n_sub_arr[thread_id]
     n_inc = n_inc_arr[thread_id]
@@ -148,14 +126,14 @@ def forward_and_backward_propagation(
 
     # E_in = W_front M_i W_back E_out.
 
-    W_back_s = cuda.local.array((2, 2), dtype="complex128")
-    W_back_p = cuda.local.array((2, 2), dtype="complex128")
+    W_back_s = np.zeros((2, 2), dtype="complex128")
+    W_back_p = np.zeros((2, 2), dtype="complex128")
 
     fill_arr(W_back_s, 0.5, 0.5 / cos_inc / n_inc, 0.5, -0.5 / cos_inc / n_inc)
     fill_arr(W_back_p, 0.5 / n_inc, 0.5 / cos_inc, 0.5 / n_inc, -0.5 / cos_inc)
 
-    Ms = cuda.local.array((2, 2), dtype="complex128")
-    Mp = cuda.local.array((2, 2), dtype="complex128")
+    Ms = np.zeros((2, 2), dtype="complex128")
+    Mp = np.zeros((2, 2), dtype="complex128")
 
     for i in range(layer_number):
 
@@ -182,10 +160,10 @@ def forward_and_backward_propagation(
     '''
     BACKWARD PROPAGATION
     '''
-    partial_Ws_R = cuda.local.array((2, 2), dtype="complex128")
-    partial_Wp_R = cuda.local.array((2, 2), dtype="complex128")
-    partial_Ws_T = cuda.local.array((2, 2), dtype="complex128")
-    partial_Wp_T = cuda.local.array((2, 2), dtype="complex128")
+    partial_Ws_R = np.zeros((2, 2), dtype="complex128")
+    partial_Wp_R = np.zeros((2, 2), dtype="complex128")
+    partial_Ws_T = np.zeros((2, 2), dtype="complex128")
+    partial_Wp_T = np.zeros((2, 2), dtype="complex128")
 
     # \partial_{W_{tot}} R = r^* \partial_{W_{tot}} r
     fill_arr(
@@ -221,14 +199,14 @@ def forward_and_backward_propagation(
         0
     )
 
-    W_front_s = cuda.local.array((2, 2), dtype="complex128")
-    W_front_p = cuda.local.array((2, 2), dtype="complex128")
-    Ms_inv = cuda.local.array((2, 2), dtype='complex128')
-    Mp_inv = cuda.local.array((2, 2), dtype='complex128')
-    partial_n_Ms = cuda.local.array((2, 2), dtype='complex128')
-    partial_n_Mp = cuda.local.array((2, 2), dtype='complex128')
-    tmp_res_s = cuda.local.array((2, 2), dtype='complex128')
-    tmp_res_p = cuda.local.array((2, 2), dtype='complex128')
+    W_front_s = np.zeros((2, 2), dtype="complex128")
+    W_front_p = np.zeros((2, 2), dtype="complex128")
+    Ms_inv = np.zeros((2, 2), dtype='complex128')
+    Mp_inv = np.zeros((2, 2), dtype='complex128')
+    partial_n_Ms = np.zeros((2, 2), dtype='complex128')
+    partial_n_Mp = np.zeros((2, 2), dtype='complex128')
+    tmp_res_s = np.zeros((2, 2), dtype='complex128')
+    tmp_res_p = np.zeros((2, 2), dtype='complex128')
 
     # make front matrix
     fill_arr(W_front_s, 0.5, 0.5 / cos_inc /
@@ -304,7 +282,6 @@ def forward_and_backward_propagation(
         (partial_n_Ts * s_ratio + partial_n_Tp * p_ratio).real / (s_ratio + p_ratio)
 
 
-@cuda.jit
 def calc_M(Ms, Mp, n_inc, inc_ang, ni, di, wl):
 
     costheta = cmath.sqrt(
@@ -324,7 +301,6 @@ def calc_M(Ms, Mp, n_inc, inc_ang, ni, di, wl):
     Mp[1, 1] = coshi
 
 
-@cuda.jit
 def calc_M_inv(Ms, Mp, n_inc, inc_ang, ni, di, wl):
     costheta = cmath.sqrt(
         1 - ((n_inc / ni) * cmath.sin(inc_ang)) ** 2)
@@ -344,7 +320,6 @@ def calc_M_inv(Ms, Mp, n_inc, inc_ang, ni, di, wl):
     Mp[1, 1] = coshi
 
 
-@cuda.jit
 def fill_arr(A, a00, a01, a10, a11):
     A[0, 0] = a00
     A[0, 1] = a01
@@ -352,7 +327,6 @@ def fill_arr(A, a00, a01, a10, a11):
     A[1, 1] = a11
 
 
-@cuda.jit
 def calc_partial_n_M(res_mat_s, res_mat_p, n_inc, inc_ang, ni, di, wl):
     '''
         theta: incident angle at i-th layer

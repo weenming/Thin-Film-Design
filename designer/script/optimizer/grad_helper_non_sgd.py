@@ -27,7 +27,7 @@ def stack_init_params(film: TwoMaterialFilm, target_spec_ls: list[Spectrum]):
 
 def stack_f(
     f_old,
-    n_arrs_ls: list[list[np.array]],
+    n_arrs_ls: list[list[np.typing.NDArray]],
     d,
     target_spec_ls: list[BaseSpectrum],
     get_f=get_spectrum_simple,
@@ -71,7 +71,7 @@ def stack_f(
 def stack_J(
     J_old,
     n_arrs_ls,
-    d: np.array,
+    d: np.typing.NDArray,
     target_spec_ls: list[BaseSpectrum],
     get_J=get_jacobi_simple,
     MAX_LAYER_NUMBER=250,

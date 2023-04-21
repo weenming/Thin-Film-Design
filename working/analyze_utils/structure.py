@@ -2,7 +2,7 @@ import numpy as np
 
 from film import TwoMaterialFilm
 import matplotlib.pyplot as plt
-from design import DesignSimple
+from design import BaseDesign
 
 
 # TODO: optimize metric: calculate structure in smaller or larger thickness?
@@ -193,7 +193,7 @@ def plot_layer_thickness(film: TwoMaterialFilm):
     return ax, fig
 
 
-def show_design_process(design: DesignSimple):
+def show_design_process(design: BaseDesign):
     spec = design.film.get_spec()
     n_A = spec.n[spec.WLS.shape[0] // 2, 0]
     n_B = spec.n[spec.WLS.shape[0] // 2, 1]

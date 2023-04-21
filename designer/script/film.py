@@ -5,6 +5,7 @@ import utils.get_n as get_n
 from spectrum import SpectrumSimple
 from abc import ABC, abstractmethod
 from typing import Callable
+import tmm.get_spectrum as get_spectrum
 
 
 class BaseFilm(ABC):
@@ -61,10 +62,6 @@ class BaseFilm(ABC):
     def get_all_spec_list(self) -> list[SpectrumSimple]:
         return self.spectrums
 
-    def calculate_spectrum(self):
-        for s in self.spectrums:
-            s.calculate()
-
     # n_array related
     @abstractmethod
     def calculate_n_array(self, wls: NDArray):
@@ -114,11 +111,15 @@ class BaseFilm(ABC):
     def get_optical_thickness(self, wl, neglect_last_layer=False) -> float:
         raise NotImplementedError
 
+    @abstractmethod
+    def calculate_spectrum(self):
+        raise NotImplementedError
+
 
 class FreeFormFilm(BaseFilm):
     def __init__(
         self,
-        init_n_arr: NDArray,
+        init_n_ls: NDArray,
         total_gt,
         substrate: str,
         incidence='Air',
@@ -131,7 +132,7 @@ class FreeFormFilm(BaseFilm):
             Parameters:
                 init_n_arr:
                     Every layers' refractive indix is relaxed to evolve 
-                    continuously
+                    continuously. No dispersion supported currently
                 total_gt:
                     total allowed geometric thickness. As described in \cite{}
                     total thickness of a layer is a key constraint to the lower
@@ -147,10 +148,10 @@ class FreeFormFilm(BaseFilm):
         '''
         if allowed_materials is not None:
             raise NotImplementedError
-        self.d = np.ones(init_n_arr.shape[0], dtype='float')
-        self.d *= total_gt / self.d
-        init_n_arr = init_n_arr.astype('complex128')
-        self.n = init_n_arr
+        self.d = np.ones(init_n_ls.shape[0], dtype='float')
+        self.d *= total_gt / (self.d).sum()
+        init_n_ls = init_n_ls.astype('complex128')
+        self.n = init_n_ls
         self.spectrums = []
         try:
             exec(f"self.get_n_sub = get_n.get_n_{substrate}")
@@ -177,6 +178,10 @@ class FreeFormFilm(BaseFilm):
 
     def get_n(self):
         return self.n
+
+    def calculate_spectrum(self):
+        for s in self.spectrums:
+            s.calculate(get_spectrum.get_spectrum_free)
 
 
 class TwoMaterialFilm(BaseFilm):
@@ -342,3 +347,7 @@ class TwoMaterialFilm(BaseFilm):
         if neglect_last_layer:
             ot -= self.get_d()[-1] * (n_A if l % 2 == 1 else n_B)
         return ot
+
+    def calculate_spectrum(self):
+        for s in self.spectrums:
+            s.calculate(get_spectrum.get_spectrum_simple)

@@ -82,9 +82,9 @@ class SpectrumSimple(BaseSpectrum):
         # [R, T]
         self.n = self.film.calculate_n_array(self.WLS)
 
-    def calculate(self):
+    def calculate(self, spec_func=get_spectrum.get_spectrum_simple):
         # only R spectrum
-        get_spectrum.get_spectrum_simple(
+        spec_func(
             self.spec,
             self.WLS,
             self.film.get_d(),
@@ -92,7 +92,6 @@ class SpectrumSimple(BaseSpectrum):
             self.n_sub,
             self.n_inc,
             self.INC_ANG
-
         )
         self.spec_R = self.spec[:self.WLS.shape[0]]
         self.spec_T = self.spec[self.WLS.shape[0]:]

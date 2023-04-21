@@ -1,20 +1,19 @@
 import numpy as np
 import cmath
 from numba import cuda
-from tmm.mat_lib import mul_to # multiply
-from tmm.mat_lib import tsp # transpose
-
+from tmm.mat_lib import mul_to  # multiply
+from tmm.mat_lib import tsp  # transpose
 
 
 def get_jacobi_simple(
-    jacobi, 
-    wls, 
-    d, 
-    n_layers, 
-    n_sub, 
-    n_inc, 
-    inc_ang, 
-    total_layer_number
+    jacobi,
+    wls,
+    d,
+    n_layers,
+    n_sub,
+    n_inc,
+    inc_ang,
+    total_layer_number=None
 ):
     """
     This function calculates the Jacobi matrix of a given TFNN. Back 
@@ -47,16 +46,16 @@ def get_jacobi_simple(
     inc_ang_rad = inc_ang / 180 * np.pi
     # traverse all wl, save R and T to the 2N*1 np.array spectrum. [R, T]
     wls_size = wls.shape[0]
-    
-    # TODO: move the copy of wls, n arr to outer loop 
-    # (caller of spec, for example LM optimizer) 
+
+    # TODO: move the copy of wls, n arr to outer loop
+    # (caller of spec, for example LM optimizer)
     # Maybe allowing it to pass in additional device arr would be a good idea
 
     # copy wls, d, n_layers, n_sub, n_inc, inc_ang to GPU
     wls_device = cuda.to_device(wls)
     d_device = cuda.to_device(d)
     # copy 2d arr into 1d as contiguous arr to save data transfer
-    n_A = n_layers[:, 0].copy() 
+    n_A = n_layers[:, 0].copy()
     n_A_device = cuda.to_device(n_A)
     # may have only 1 layer.
     if layer_number == 1:
@@ -70,18 +69,18 @@ def get_jacobi_simple(
     # allocate space for Jacobi matrix
     jacobi_device = cuda.device_array(
         (wls_size * 2, layer_number),
-        strides = (8 * total_layer_number, 8),
-        dtype = "float64"
+        strides=(8 * layer_number, 8),
+        dtype="float64"
     )
 
     # invoke kernel
-    block_size = 16 # threads per block
-    grid_size = (wls_size + block_size - 1) // block_size # blocks per grid
+    block_size = 16  # threads per block
+    grid_size = (wls_size + block_size - 1) // block_size  # blocks per grid
 
     forward_and_backward_propagation[grid_size, block_size](
         jacobi_device,
         wls_device,
-        d_device, 
+        d_device,
         n_A_device,
         n_B_device,
         n_sub_device,
@@ -97,7 +96,7 @@ def get_jacobi_simple(
 
 @cuda.jit
 def forward_and_backward_propagation(jacobi, wls, d, n_A_arr, n_B_arr,
-                 n_sub_arr, n_inc_arr, inc_ang, wls_size, layer_number):
+                                     n_sub_arr, n_inc_arr, inc_ang, wls_size, layer_number):
     """
     Parameters:
         jacobi (cuda.device_array):
@@ -129,14 +128,14 @@ def forward_and_backward_propagation(jacobi, wls, d, n_A_arr, n_B_arr,
     n_B = n_B_arr[thread_id]
     n_sub = n_sub_arr[thread_id]
     n_inc = n_inc_arr[thread_id]
-    # Incident angle in each layer. 
+    # Incident angle in each layer.
     # Snell's law: n_a sin(phi_a) = n_b sin(phi_b)
     cos_A = cmath.sqrt(1 - ((n_inc / n_A) * cmath.sin(inc_ang)) ** 2)
     cos_B = cmath.sqrt(1 - ((n_inc / n_B) * cmath.sin(inc_ang)) ** 2)
     cos_inc = cmath.cos(inc_ang)
     cos_sub = cmath.sqrt(1 - ((n_inc / n_sub) * cmath.sin(inc_ang)) ** 2)
-    
-    # choose cos from arr of size 2. 
+
+    # choose cos from arr of size 2.
     # Use local array which is private to thread
     cos_arr = cuda.local.array(2, dtype="complex128")
     cos_arr[0] = cos_A
@@ -144,33 +143,37 @@ def forward_and_backward_propagation(jacobi, wls, d, n_A_arr, n_B_arr,
 
     n_arr = cuda.local.array(2, dtype="complex128")
     n_arr[0] = n_A
-    n_arr[1] = n_B   
+    n_arr[1] = n_B
 
     '''
     FORWARD PROPAGATION
     '''
 
-    # Allocate space for M 
-    # NOTE: this implementation is shit. Need to find a way to make 
+    # Allocate space for M
+    # NOTE: this implementation is shit. Need to find a way to make
     # numba compile MAX_LAYER_NUMBER into constant...
     # Now I am MANUALLY EXPANDING THE CONSTANT INTO EVERY EXPRESSION
     # NOTE: Support MAX_LAYER_NUMBER layers for now.
-    # also note that allocation of large space drastically affect the 
+    # also note that allocation of large space drastically affect the
     # performance of the algorithm
     MAX_LAYER_NUMBER = 250
     # bad news: dynamic memory allocation not supported on GPU
-    Ms = cuda.local.array((250 + 2, 2, 2), dtype="complex128") # NOTE: MAX_LAYER_NUMBER
-    Mp = cuda.local.array((250 + 2, 2, 2), dtype="complex128") # NOTE: MAX_LAYER_NUMBER
+    # NOTE: MAX_LAYER_NUMBER
+    Ms = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
+    # NOTE: MAX_LAYER_NUMBER
+    Mp = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
 
     # Allocate space for W. Fill with first term D_{0}^{-1}
     # TODO: add the influence of n of incident material (when not air)
-    Ws = cuda.local.array((250 + 2, 2, 2), dtype="complex128") # NOTE: MAX_LAYER_NUMBER
+    # NOTE: MAX_LAYER_NUMBER
+    Ws = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
     Ws[0, 0, 0] = 0.5
     Ws[0, 0, 1] = 0.5 / cos_inc
     Ws[0, 1, 0] = 0.5
     Ws[0, 1, 1] = -0.5 / cos_inc
-    
-    Wp = cuda.local.array((250 + 2, 2, 2), dtype="complex128") # NOTE: MAX_LAYER_NUMBER
+
+    # NOTE: MAX_LAYER_NUMBER
+    Wp = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
     Wp[0, 0, 0] = 0.5
     Wp[0, 0, 1] = 0.5 / cos_inc
     Wp[0, 1, 0] = 0.5
@@ -197,7 +200,7 @@ def forward_and_backward_propagation(jacobi, wls, d, n_A_arr, n_B_arr,
         mul_to(Ws[i, :, :], Ms[i + 1, :, :], Ws[i + 1, :, :])
         mul_to(Wp[i, :, :], Mp[i + 1, :, :], Wp[i + 1, :, :])
 
-    # construct the last term D_{n+1} 
+    # construct the last term D_{n+1}
     # technically this is merely D which is not M (D^{-2}PD)
     Ms[layer_number + 1, 0, 0] = 1.
     Ms[layer_number + 1, 0, 1] = 1.
@@ -209,8 +212,10 @@ def forward_and_backward_propagation(jacobi, wls, d, n_A_arr, n_B_arr,
     Mp[layer_number + 1, 1, 0] = cos_sub
     Mp[layer_number + 1, 1, 1] = cos_sub
 
-    mul_to(Ws[layer_number, :, :], Ms[layer_number + 1, :, :], Ws[layer_number + 1, :, :])
-    mul_to(Wp[layer_number, :, :], Mp[layer_number + 1, :, :], Wp[layer_number + 1, :, :])
+    mul_to(Ws[layer_number, :, :], Ms[layer_number + 1, :, :],
+           Ws[layer_number + 1, :, :])
+    mul_to(Wp[layer_number, :, :], Mp[layer_number + 1, :, :],
+           Wp[layer_number + 1, :, :])
 
     # retrieve R and T (calculate the factor before energy flux)
     # Note that spectrum is array on device
@@ -224,7 +229,6 @@ def forward_and_backward_propagation(jacobi, wls, d, n_A_arr, n_B_arr,
     T = cos_sub / cos_inc * n_sub * (
         ts * ts.conjugate() + tp * tp.conjugate()) / 2
 
-
     '''
     BACKWARD PROPAGATION
     '''
@@ -237,30 +241,32 @@ def forward_and_backward_propagation(jacobi, wls, d, n_A_arr, n_B_arr,
     partial_Ms_t = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
     partial_Mp_r = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
     partial_Mp_t = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
-    
+
     # \partial_{W_{n + 1}} r or t (derivative from the last layer)
-    partial_Ws_r[layer_number + 1, 0, 0] = -Ws[layer_number + 1, 1, 0] / Ws[layer_number + 1, 0, 0] ** 2
+    partial_Ws_r[layer_number + 1, 0, 0] = - \
+        Ws[layer_number + 1, 1, 0] / Ws[layer_number + 1, 0, 0] ** 2
     partial_Ws_r[layer_number + 1, 0, 1] = 0
     partial_Ws_r[layer_number + 1, 1, 0] = 1 / Ws[layer_number + 1, 0, 0]
     partial_Ws_r[layer_number + 1, 1, 1] = 0
-    
+
     partial_Ws_t[layer_number + 1, 0, 0] = -1 / Ws[layer_number + 1, 0, 0] ** 2
     partial_Ws_t[layer_number + 1, 0, 1] = 0
     partial_Ws_t[layer_number + 1, 1, 0] = 0
     partial_Ws_t[layer_number + 1, 1, 1] = 0
-    
-    partial_Wp_r[layer_number + 1, 0, 0] = -Wp[layer_number + 1, 1, 0] / Wp[layer_number + 1, 0, 0] ** 2
+
+    partial_Wp_r[layer_number + 1, 0, 0] = - \
+        Wp[layer_number + 1, 1, 0] / Wp[layer_number + 1, 0, 0] ** 2
     partial_Wp_r[layer_number + 1, 0, 1] = 0
     partial_Wp_r[layer_number + 1, 1, 0] = 1 / Wp[layer_number + 1, 0, 0]
     partial_Wp_r[layer_number + 1, 1, 1] = 0
-    
+
     partial_Wp_t[layer_number + 1, 0, 0] = -1 / Wp[layer_number + 1, 0, 0] ** 2
     partial_Wp_t[layer_number + 1, 0, 1] = 0
     partial_Wp_t[layer_number + 1, 1, 0] = 0
     partial_Wp_t[layer_number + 1, 1, 1] = 0
 
     # get \partial_W and thus \partial_M for every M
-    tmp_matrix = cuda.local.array((2, 2), dtype="complex128") # for transpose
+    tmp_matrix = cuda.local.array((2, 2), dtype="complex128")  # for transpose
     for i in range(layer_number):
         # s-polarized
         tsp(Ms[layer_number + 1 - i, :, :], tmp_matrix)
@@ -268,28 +274,28 @@ def forward_and_backward_propagation(jacobi, wls, d, n_A_arr, n_B_arr,
             partial_Ws_r[layer_number + 1 - i, :, :],
             tmp_matrix,
             partial_Ws_r[layer_number - i, :, :]
-            )
+        )
 
         tsp(Ws[layer_number - i - 1, 0:, 0:], tmp_matrix)
         mul_to(
             tmp_matrix,
             partial_Ws_r[layer_number - i, 0:, 0:],
             partial_Ms_r[layer_number - i, 0:, 0:]
-            )
-        
+        )
+
         tsp(Ms[layer_number + 1 - i, 0:, 0:], tmp_matrix)
         mul_to(
             partial_Ws_t[layer_number + 1 - i, 0:, 0:],
             tmp_matrix,
             partial_Ws_t[layer_number - i, 0:, 0:]
-            )
+        )
 
         tsp(Ws[layer_number - i - 1, 0:, 0:], tmp_matrix)
         mul_to(
             tmp_matrix,
             partial_Ws_t[layer_number - i, 0:, 0:],
             partial_Ms_t[layer_number - i, 0:, 0:]
-            )
+        )
 
         # p-polarized
         tsp(Mp[layer_number + 1 - i, :, :], tmp_matrix)
@@ -297,33 +303,33 @@ def forward_and_backward_propagation(jacobi, wls, d, n_A_arr, n_B_arr,
             partial_Wp_r[layer_number + 1 - i, :, :],
             tmp_matrix,
             partial_Wp_r[layer_number - i, :, :]
-            )
+        )
 
         tsp(Wp[layer_number - i - 1, 0:, 0:], tmp_matrix)
         mul_to(
             tmp_matrix,
             partial_Wp_r[layer_number - i, 0:, 0:],
             partial_Mp_r[layer_number - i, 0:, 0:]
-            )
-        
+        )
+
         tsp(Mp[layer_number + 1 - i, 0:, 0:], tmp_matrix)
         mul_to(
             partial_Wp_t[layer_number + 1 - i, 0:, 0:],
             tmp_matrix,
             partial_Wp_t[layer_number - i, 0:, 0:]
-            )
+        )
 
         tsp(Wp[layer_number - i - 1, 0:, 0:], tmp_matrix)
         mul_to(
             tmp_matrix,
             partial_Wp_t[layer_number - i, 0:, 0:],
             partial_Mp_t[layer_number - i, 0:, 0:]
-            )
+        )
 
     # derive \partial_d r (t) from \partial_M r (t)
 
     for i in range(layer_number):
-        # M[i + 1] corresponds to i-th layer 
+        # M[i + 1] corresponds to i-th layer
         # (first layer with material A is the 0-th layer)
         cosi = cos_arr[i % 2]
         phi = 2 * cmath.pi * 1j * cosi * n_arr[i % 2] * d[i] / wl
@@ -335,35 +341,39 @@ def forward_and_backward_propagation(jacobi, wls, d, n_A_arr, n_B_arr,
         jacobi[thread_id, i] = \
             (
             rp.conjugate() * (
-                partial_Mp_r[i + 1, 0, 0] * 2 * cmath.pi * 1j * ni * cosi * sinhi + 
+                partial_Mp_r[i + 1, 0, 0] * 2 * cmath.pi * 1j * ni * cosi * sinhi +
                 partial_Mp_r[i + 1, 0, 1] * 2 * cmath.pi * 1j * ni ** 2 * coshi +
                 partial_Mp_r[i + 1, 1, 0] * 2 * cmath.pi * 1j * cosi ** 2 * coshi +
-                partial_Mp_r[i + 1, 1, 1] * 2 * cmath.pi * 1j * ni * cosi * sinhi
+                partial_Mp_r[i + 1, 1, 1] * 2 *
+                cmath.pi * 1j * ni * cosi * sinhi
             )
-            + 
+            +
             rs.conjugate() * (
                 partial_Ms_r[i + 1, 0, 0] * 2 * cmath.pi * 1j * ni * cosi * sinhi +
                 partial_Ms_r[i + 1, 0, 1] * 2 * cmath.pi * 1j * coshi +
                 partial_Ms_r[i + 1, 1, 0] * 2 * cmath.pi * 1j * cosi ** 2 * ni ** 2 * coshi +
-                partial_Ms_r[i + 1, 1, 1] * 2 * cmath.pi * 1j * ni * cosi * sinhi
+                partial_Ms_r[i + 1, 1, 1] * 2 *
+                cmath.pi * 1j * ni * cosi * sinhi
             )
-            ).real / wl / 2 # div by 2 to normalize the sum of 2 polarizations
-        
+        ).real / wl / 2  # div by 2 to normalize the sum of 2 polarizations
+
         # partial_d T
         jacobi[thread_id + wls_size, i] = \
             (cos_sub / cos_inc * n_sub).real * \
             (
             tp.conjugate() * (
-                partial_Mp_t[i + 1, 0, 0] * 2 * cmath.pi * 1j * ni * cosi * sinhi + 
+                partial_Mp_t[i + 1, 0, 0] * 2 * cmath.pi * 1j * ni * cosi * sinhi +
                 partial_Mp_t[i + 1, 0, 1] * 2 * cmath.pi * 1j * ni ** 2 * coshi +
                 partial_Mp_t[i + 1, 1, 0] * 2 * cmath.pi * 1j * cosi ** 2 * coshi +
-                partial_Mp_t[i + 1, 1, 1] * 2 * cmath.pi * 1j * ni * cosi * sinhi
+                partial_Mp_t[i + 1, 1, 1] * 2 *
+                cmath.pi * 1j * ni * cosi * sinhi
             )
-            + 
+            +
             ts.conjugate() * (
                 partial_Ms_t[i + 1, 0, 0] * 2 * cmath.pi * 1j * ni * cosi * sinhi +
                 partial_Ms_t[i + 1, 0, 1] * 2 * cmath.pi * 1j * coshi +
                 partial_Ms_t[i + 1, 1, 0] * 2 * cmath.pi * 1j * cosi ** 2 * ni ** 2 * coshi +
-                partial_Ms_t[i + 1, 1, 1] * 2 * cmath.pi * 1j * ni * cosi * sinhi
+                partial_Ms_t[i + 1, 1, 1] * 2 *
+                cmath.pi * 1j * ni * cosi * sinhi
             )
-            ).real / wl / 2 # div by 2 to normalize the sum of 2 polarizations
+        ).real / wl / 2  # div by 2 to normalize the sum of 2 polarizations

@@ -71,18 +71,13 @@ class SpectrumSimple(BaseSpectrum):
     def __init__(self, incident_angle, wavelengths, film):
         self.INC_ANG = incident_angle
         self.WLS = wavelengths
-        self.n = film.calculate_n_array(self.WLS)
         self.n_sub = film.calculate_n_sub(self.WLS)
         self.n_inc = film.calculate_n_inc(self.WLS)
         self.spec = np.empty(self.WLS.shape[0] * 2)
         self.film = film
         self.updated = False
 
-    def update_n(self):
-        # [R, T]
-        self.n = self.film.calculate_n_array(self.WLS)
-
-    def calculate(self, spec_func=get_spectrum.get_spectrum_simple):
+    def calculate(self, spec_func=get_spectrum.get_spectrum_free):
         # only R spectrum
         spec_func(
             self.spec,

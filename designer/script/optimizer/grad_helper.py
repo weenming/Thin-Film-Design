@@ -3,12 +3,12 @@ import numpy as np
 from tmm.get_jacobi import get_jacobi_simple
 from tmm.get_spectrum import get_spectrum_simple
 from typing import Sequence
-from film import TwoMaterialFilm
+from film import TwoMaterialFilm, BaseFilm
 from spectrum import BaseSpectrum, Spectrum
 
 
 def stack_init_params(
-    film: TwoMaterialFilm,
+    film: BaseFilm,
     target_spec_ls: Sequence[BaseSpectrum],
 ):
     # stack parameters & preparations
@@ -111,31 +111,24 @@ def stack_J(
         wl_num_min = np.min([s.WLS.shape[0] for s in target_spec_ls])
         wl_batch_idx = np.arange(wl_num_min)
 
-    d_count = 0
-    M = MAX_LAYER_NUMBER
     d_num = d.shape[0]
-    for _ in range((d_num - 1) // M + 1):
-        d_count_next = min(d_num, d_count + M)
 
-        wl_count = 0
-        for i, (s, n_arrs) in enumerate(zip(target_spec_ls, n_arrs_ls)):
+    wl_count = 0
+    for i, (s, n_arrs) in enumerate(zip(target_spec_ls, n_arrs_ls)):
 
-            wl_num = wl_batch_idx.shape[0]  # R and T: wbatch can be 2 #wl long
+        wl_num = wl_batch_idx.shape[0]  # R and T: wbatch can be 2 #wl long
 
-            if i not in spec_batch_idx:  # for SGD
-                continue
+        if i not in spec_batch_idx:  # for SGD
+            continue
 
-            get_J(
-                J_old[wl_count: wl_count + wl_num * 2,
-                      d_count: d_count_next],  # R & T
-                s.WLS[wl_batch_idx],
-                d[d_count: d_count_next],
-                n_arrs[0][wl_batch_idx, d_count: d_count_next],
-                n_arrs[1][wl_batch_idx],  # n_sub
-                n_arrs[2][wl_batch_idx],  # n_inc
-                s.INC_ANG,
-                total_layer_number=d_num
-            )
-            wl_count += wl_num * 2
-        d_count += M
+        get_J(
+            J_old[wl_count: wl_count + wl_num * 2, :],  # R & T
+            s.WLS[wl_batch_idx],
+            d[:],
+            n_arrs[0][wl_batch_idx, :],
+            n_arrs[1][wl_batch_idx],  # n_sub
+            n_arrs[2][wl_batch_idx],  # n_inc
+            s.INC_ANG,
+        )
+        wl_count += wl_num * 2
     return

@@ -5,7 +5,7 @@ from tmm.get_spectrum import get_spectrum_simple
 from film import TwoMaterialFilm
 from spectrum import BaseSpectrum
 
-from optimizer.grad_helper_non_sgd import stack_f, stack_J, stack_init_params
+from optimizer.grad_helper import stack_f, stack_J, stack_init_params
 
 
 def LM_optimize_d_simple(

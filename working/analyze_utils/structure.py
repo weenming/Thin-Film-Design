@@ -1,6 +1,6 @@
 import numpy as np
 
-from film import TwoMaterialFilm
+from film import TwoMaterialFilm, BaseFilm
 import matplotlib.pyplot as plt
 from design import BaseDesign
 
@@ -21,8 +21,8 @@ def diff_simple_film(film1: TwoMaterialFilm, film2: TwoMaterialFilm, metric='abs
         wl: wl at which refractive index is evaluated
     '''
 
-    n1A, n1B = film1.get_n_A(wl), film1.get_n_B(wl)
-    n2A, n2B = film2.get_n_A(wl), film2.get_n_B(wl)
+    n1_ls = film1.calculate_n_array(np.array([wl]))[0, :]
+    n2_ls = film2.calculate_n_array(np.array([wl]))[0, :]
     n1_sub, n2_sub = film1.get_n_sub(wl), film2.get_n_sub(wl)
     d1, d2 = film1.get_d(), film2.get_d()  # array of thicknesses in nm
 
@@ -35,20 +35,20 @@ def diff_simple_film(film1: TwoMaterialFilm, film2: TwoMaterialFilm, metric='abs
 
     if np.sum(d1) > np.sum(d2):
         l1_diff = calculate_diff(
-            d1, n1A, n1B,
-            d2, n2A, n2B,
+            d1, n1_ls,
+            d2, n2_ls,
             n2_sub
         )
     else:
         l1_diff = calculate_diff(
-            d2, n2A, n2B,
-            d1, n1A, n1B,
+            d2, n2_ls,
+            d1, n1_ls,
             n1_sub
         )
 
     # norm(?) by the largest possible film
     if norm is None:
-        norm = (np.max([n1A, n2A, n1B, n2B]) - np.min([n1A, n2A, n1B, n2B])) * \
+        norm = (np.max(np.append(n1_ls, n2_ls)) - np.min(np.append(n1_ls, n2_ls))) * \
             np.max([np.sum(d1), np.sum(d2)])
 
     l1_diff /= norm
@@ -56,7 +56,7 @@ def diff_simple_film(film1: TwoMaterialFilm, film2: TwoMaterialFilm, metric='abs
     return l1_diff
 
 
-def _calculate_structure_difference_simple_film_abs(d1, n1A, n1B, d2, n2A, n2B, n_sub):
+def _calculate_structure_difference_simple_film_abs(d1, n1_ls, d2, n2_ls, n_sub):
     '''
     Calculate the difference between two films.
     The metric used is: \int \|n_1(x) - n_2(x)\|_1 dx
@@ -74,8 +74,8 @@ def _calculate_structure_difference_simple_film_abs(d1, n1A, n1B, d2, n2A, n2B, 
     depth = 0.
 
     while depth < np.sum(d1) - 1e-5:
-        n1 = [n1A, n1B][i1 % 2]
-        n2 = [n2A, n2B][i2 % 2] if i2 < d2.shape[0] else n_sub
+        n1 = n1_ls[i1]
+        n2 = n2_ls[i2] if i2 < d2.shape[0] else n_sub
 
         if depth1 < depth2:
             diff += np.abs(n1 - n2) * (depth1 - depth)
@@ -111,7 +111,7 @@ def _calculate_structure_difference_simple_film_abs(d1, n1A, n1B, d2, n2A, n2B, 
     return diff
 
 
-def _calculate_structure_difference_simple_film_RMS(d1, n1A, n1B, d2, n2A, n2B, n_sub):
+def _calculate_structure_difference_simple_film_RMS(d1, n1_ls, d2, n2_ls, n_sub):
     '''
     Calculate the difference between two films.
     The metric used is: \int \|n_1(x) - n_2(x)\|^2 dx
@@ -129,8 +129,8 @@ def _calculate_structure_difference_simple_film_RMS(d1, n1A, n1B, d2, n2A, n2B, 
     depth = 0.
 
     while depth < np.sum(d1) - 1e-5:
-        n1 = [n1A, n1B][i1 % 2]
-        n2 = [n2A, n2B][i2 % 2] if i2 < d2.shape[0] else n_sub
+        n1 = n1_ls[i1]
+        n2 = n2_ls[i2] if i2 < d2.shape[0] else n_sub
 
         if depth1 < depth2:
             diff += np.square((n1 - n2) * (depth1 - depth))
@@ -166,19 +166,19 @@ def _calculate_structure_difference_simple_film_RMS(d1, n1A, n1B, d2, n2A, n2B, 
     return np.sqrt(diff)
 
 
-def plot_layer_thickness(film: TwoMaterialFilm):
+def plot_layer_thickness(film: BaseFilm):
     # wl: middle wl of the first spec
     d = film.get_d()
     spec = film.get_all_spec_list()[0]
-    n_A = spec.n[spec.WLS.shape[0] // 2, 0]
-    n_B = spec.n[spec.WLS.shape[0] // 2, 1]
-    n_arr = [n_A, n_B]
+    n_arr = film.calculate_n_array(spec.WLS)[spec.WLS.shape[0] // 2, :]
+    n_inc = film.calculate_n_inc(spec.WLS)[spec.WLS.shape[0] // 2]
+    n_arr = np.insert(n_arr, 0, n_inc)
 
     fig, ax = plt.subplots(1, 1)
     cur_d = 0
     for i in range(d.shape[0]):
-        this_n = n_arr[i % 2]
-        last_n = n_arr[(i - 1) % 2]
+        this_n = n_arr[i]
+        last_n = n_arr[i - 1]
         ax.plot([cur_d, cur_d + d[i]], [this_n, this_n], color='steelblue')
         if i != 0:
             ax.plot([cur_d, cur_d], [this_n, last_n], c='steelblue')

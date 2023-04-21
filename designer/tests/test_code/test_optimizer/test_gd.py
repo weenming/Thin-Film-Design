@@ -4,7 +4,7 @@ sys.path.append('./')
 
 from design import DesignForSpecSimple
 from optimizer.adam import adam_optimize
-from optimizer.adam_non_sgd import adam_optimize_non_sgd
+from optimizer.arxiv.adam_non_sgd import adam_optimize_non_sgd
 from optimizer.LM_gradient_descent import LM_optimize_d_simple
 from spectrum import Spectrum
 from film import TwoMaterialFilm
@@ -77,7 +77,7 @@ def make_design():
     d_init = np.random.random(52) * 100.
     init_film = TwoMaterialFilm('SiO2', 'TiO2', 'SiO2', d_init)
 
-    design = DesignForSpecSimple(target_spec, init_film)
+    design = DesignForSpecSimple([target_spec], init_film)
     return design
 
 

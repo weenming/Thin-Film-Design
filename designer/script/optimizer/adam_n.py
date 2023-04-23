@@ -6,7 +6,7 @@ from tmm.get_jacobi_n_adjoint import get_jacobi_free_form
 from tmm.get_spectrum import get_spectrum_free
 
 from optimizer.grad_helper import stack_f, stack_J, stack_init_params
-from utils.loss import calculate_RMS_f_spec
+from utils.loss import calculate_RMS_f_spec, rms
 from spectrum import BaseSpectrum
 from film import FreeFormFilm
 import numpy as np
@@ -139,11 +139,11 @@ def adam_optimize(
 
         # record and show functions
         if record:
-            losses.append(calculate_RMS_f_spec(film, target_spec_ls))
+            losses.append(rms(f))
             films.append(copy.deepcopy(film))
         if show:
             print(
-                f'iter {t}, loss {calculate_RMS_f_spec(film, target_spec_ls)}')
+                f'iter {t}, loss {rms(f)}')
 
         # if loss not decreasing, break
         try:

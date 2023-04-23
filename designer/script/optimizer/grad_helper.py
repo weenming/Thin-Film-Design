@@ -59,6 +59,9 @@ def stack_f(
     """
     if spec_batch_idx is None:
         spec_batch_idx = list(range(len(target_spec_ls)))
+    if wl_batch_idx is None:
+        wl_num_min = np.min([s.WLS.shape[0] for s in target_spec_ls])
+        wl_batch_idx = np.arange(wl_num_min)
 
     wl_idx = 0
     for i, (s, n_arrs) in enumerate(zip(target_spec_ls, n_arrs_ls)):
@@ -73,7 +76,7 @@ def stack_f(
             f_old[wl_idx: wl_idx + wl_num * 2],  # R & T
             s.WLS[wl_batch_idx],
             d,
-            n_arrs[0][wl_batch_idx],
+            n_arrs[0][wl_batch_idx, :],
             n_arrs[1][wl_batch_idx],  # n_sub
             n_arrs[2][wl_batch_idx],  # n_inc
             s.INC_ANG
@@ -83,7 +86,7 @@ def stack_f(
         f_old[wl_idx: wl_idx + wl_num] -= s.get_R()[wl_batch_idx]
         f_old[wl_idx + wl_num: wl_idx + wl_num * 2] -= s.get_T()[wl_batch_idx]
 
-        wl_idx += wl_num
+        wl_idx += wl_num * 2
     return
 
 
@@ -111,14 +114,12 @@ def stack_J(
         wl_num_min = np.min([s.WLS.shape[0] for s in target_spec_ls])
         wl_batch_idx = np.arange(wl_num_min)
 
-    d_num = d.shape[0]
-
     wl_count = 0
     for i, (s, n_arrs) in enumerate(zip(target_spec_ls, n_arrs_ls)):
 
-        wl_num = wl_batch_idx.shape[0]  # R and T: wbatch can be 2 #wl long
+        wl_num = wl_batch_idx.shape[0]  # R and T: batch can be 2 #wl long
 
-        if i not in spec_batch_idx:  # for SGD
+        if i not in spec_batch_idx:  # mini-batching
             continue
 
         get_J(

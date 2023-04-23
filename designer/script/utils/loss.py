@@ -28,9 +28,8 @@ def calculate_RMS(film1: BaseFilm, film2: BaseFilm):
         T_1 = np.append(T_1, this_spec_film1.get_T())
         T_2 = np.append(T_2, this_spec_film2.get_T())
     # merit: RMS
-    RMS = np.sqrt((np.square(R_1 - R_2).sum() + np.square(T_1 - T_2).sum())
-                  / (R_1.shape[0] + T_1.shape[0]))
-    return RMS
+    f = np.append(R_1 - R_2, T_1 - T_2)
+    return rms(f)
 
 
 def calculate_RMS_f_spec(film: BaseFilm, specs: Sequence[BaseSpectrum]):
@@ -57,6 +56,9 @@ def calculate_RMS_f_spec(film: BaseFilm, specs: Sequence[BaseSpectrum]):
         T_1 = np.append(T_1, this_spec_film.get_T())
         T_2 = np.append(T_2, spec.get_T())
     # merit: RMS
-    RMS = np.sqrt((np.square(R_1 - R_2).sum() + np.square(T_1 - T_2).sum())
-                  / (R_1.shape[0] + T_1.shape[0]))
-    return RMS
+    f = np.append(R_1 - R_2, T_1 - T_2)
+    return rms(f)
+
+
+def rms(f):
+    return np.sqrt(np.sum(np.square(f)) / f.shape[0])

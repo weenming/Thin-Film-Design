@@ -40,6 +40,10 @@ class BaseFilm(ABC):
                 count += 1
         return count
 
+    def remove_all_spec_param(self):
+        self.spectrums = []
+        return
+
     def get_spec(self, inc_ang=None, wls=None) -> SpectrumSimple:
         """ return spectrum with specified wls and inc_ang
         """
@@ -100,7 +104,6 @@ class BaseFilm(ABC):
     def update_d(self, d):
         self.d = d
         for spec in self.get_all_spec_list():
-            spec.update_n()  # calculate the n array again
             spec.outdate()  # set the oudated flag of the stored spectrum(s)
         return
 

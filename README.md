@@ -66,6 +66,4 @@ Note that the version of cudatoolkit should match that of the version of the dri
 - gradient for insertions in needle method.
 
 ## To-do
-- refractor of forward propagation
-- implementation of SGD
-- implementation of variational design by subdividing film into many layers and optimize n
+- refactor of optimizer

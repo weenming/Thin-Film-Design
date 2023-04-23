@@ -4,7 +4,7 @@ from typing import TypedDict, Sequence
 
 import optimizer.needle_insert as insert
 import optimizer.LM_gradient_descent as LM_gd
-from optimizer.adam import adam_optimize
+from optimizer.adam_d import adam_optimize
 from film import TwoMaterialFilm, BaseFilm, FreeFormFilm
 from spectrum import SpectrumSimple, BaseSpectrum
 import utils.loss

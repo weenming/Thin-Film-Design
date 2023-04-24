@@ -136,8 +136,8 @@ def calculate_dB(spec: SpectrumSimple, d, layer_index):
     wls = np.repeat(spec.WLS, 2, axis=0)
     dA = d[i]
 
-    A_1 = np.array([[[0, 1], [0, 0]] for k in range(2 * spec.WLS.shape[0])])
-    A_2 = np.array([[[0, 0], [1, 0]] for k in range(2 * spec.WLS.shape[0])])
+    A_1 = np.array([[[0, 1], [0, 0]] for _ in range(2 * spec.WLS.shape[0])])
+    A_2 = np.array([[[0, 0], [1, 0]] for _ in range(2 * spec.WLS.shape[0])])
     # solve A_lambda1 and A_lambda2 respectively and acquire the ratio between d_B and d_A
     # TODO: should have used hermite conjugate. Don't forget to check consistency in the real part!
     partialL_A_1 = np.transpose(Q1, (0, 2, 1)).conj(

@@ -172,18 +172,20 @@ def plot_layer_thickness(film: BaseFilm):
     spec = film.get_all_spec_list()[0]
     n_arr = film.calculate_n_array(spec.WLS)[spec.WLS.shape[0] // 2, :]
     n_inc = film.calculate_n_inc(spec.WLS)[spec.WLS.shape[0] // 2]
-    n_arr = np.insert(n_arr, 0, n_inc)
+    n_sub = film.calculate_n_sub(spec.WLS)[spec.WLS.shape[0] // 2]
 
     fig, ax = plt.subplots(1, 1)
     cur_d = 0
     for i in range(d.shape[0]):
         this_n = n_arr[i]
-        last_n = n_arr[i - 1]
+        if i == 0:
+            last_n = n_inc
+        else:
+            last_n = n_arr[i - 1]
+        ax.plot([cur_d, cur_d], [this_n, last_n], c='steelblue')
         ax.plot([cur_d, cur_d + d[i]], [this_n, this_n], color='steelblue')
-        if i != 0:
-            ax.plot([cur_d, cur_d], [this_n, last_n], c='steelblue')
         cur_d += d[i]
-
+    ax.plot([cur_d, cur_d], [this_n, n_sub])
     # ax.set_xlim(0, 20000)
     ax.set_xlabel('position / nm')
     ax.set_xlim(0, None)

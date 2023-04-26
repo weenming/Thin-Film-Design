@@ -53,7 +53,11 @@ class AdamOptimizer(Optimizer):
         Whether to display the optimization process.
     records : list
         A list to store the recorded information during optimization.
-
+    batch_size_spec: int
+        Batch size of to pick out spectra from all spectra
+        (spectra means different inc ang, polarization, etc.)
+    batch_size_wl: int
+        Batch size to pick out wavelengths from all wls
     Methods
     -------
     optimize():
@@ -244,6 +248,25 @@ class AdamThicknessOptimizer(AdamOptimizer):
             alpha=1,
             **kwargs
     ):
+        """
+        Initializes the AdamThicknessOptimizer class, a subclass of AdamOptimizer.
+
+        Args:
+            film: The film object to be optimized.
+            target_spec_ls (Sequence[BaseSpectrum]): A sequence of target spectra.
+            max_steps (int): The maximum number of optimization steps.
+            alpha (float): The learning rate (default: 1).
+            **kwargs: Additional keyword arguments for hyperparameters, recording, and other user functionalities (inherited from AdamOptimizer):
+                - beta1 (float): The exponential decay rate for the first moment estimates (default: 0.9).
+                - beta2 (float): The exponential decay rate for the second moment estimates (default: 0.999).
+                - epsilon (float): A small constant for numerical stability (default: 1e-8).
+                - record (bool): Whether to record optimization steps (default: False).
+                - show (bool): Whether to display optimization information (default: False).
+                - optimize (callable): Custom optimization function (optional).
+                - patience (int): Maximum number of steps without improvement before stopping (default: max_steps).
+                - batch_size_spec (int): Number of spectra in each batch (default: len(target_spec_ls)).
+                - batch_size_wl (int): Number of wavelengths in each batch (default: minimum wavelengths in target_spec_ls).
+        """
         super().__init__(
             film,
             target_spec_ls,
@@ -274,6 +297,27 @@ class AdamFreeFormOptimizer(AdamOptimizer):
             alpha=0.1,
             **kwargs
     ):
+        """
+        Initializes the AdamFreeFormOptimizer class, a subclass of AdamOptimizer.
+
+        Args:
+            film (FreeFormFilm): The film object to be optimized.
+            target_spec_ls (Sequence[BaseSpectrum]): A sequence of target spectra.
+            max_steps (int): The maximum number of optimization steps.
+            alpha (float): The learning rate (default: 0.1).
+            **kwargs: Additional keyword arguments for hyperparameters, recording, and other user functionalities (inherited from AdamOptimizer):
+                - beta1 (float): The exponential decay rate for the first moment estimates (default: 0.9).
+                - beta2 (float): The exponential decay rate for the second moment estimates (default: 0.999).
+                - epsilon (float): A small constant for numerical stability (default: 1e-8).
+                - record (bool): Whether to record optimization steps (default: False).
+                - show (bool): Whether to display optimization information (default: False).
+                - optimize (callable): Custom optimization function (optional).
+                - patience (int): Maximum number of steps without improvement before stopping (default: max_steps).
+                - batch_size_spec (int): Number of spectra in each batch (default: len(target_spec_ls)).
+                - batch_size_wl (int): Number of wavelengths in each batch (default: minimum wavelengths in target_spec_ls).
+                - n_min (float): minimum refractive index allowed (default: smallest value for the EM wave to enter the first layer).
+                - n_max (float): maximum refractive index allowed (default: inf). If exceed max/min during optimization, will be projected back along the dimension in \vec{n}.
+        """
         super().__init__(
             film,
             target_spec_ls,

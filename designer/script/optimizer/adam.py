@@ -65,7 +65,7 @@ class AdamOptimizer(Optimizer):
         # in case not do_record, return an empty ls
         self._record()
 
-    def optimize(self, **kwargs):
+    def optimize(self):
         for self.i in range(self.max_steps):
             self._optimize_step()
             self._set_param()
@@ -83,21 +83,22 @@ class AdamOptimizer(Optimizer):
         return rms(self.f)
 
     def _sgd(self):
-        # shuffle for sgd
+        '''
+        Make mini-batches.
+        mat: #wls \cross #spec; pick out elem on the crossing of
+         rows=wl_idx and cols=spec_idx. For selected wl, R and T
+          are calculated simultaneously.
+
+        The size of J is fixed but the stored grads are different
+          in each epoch according to the random shuffle.
+        '''
         self.spec_batch_idx = np.random.default_rng().choice(
             len(self.target_spec_ls),
             self.batch_size_spec,
             replace=False
         )
         self.spec_batch_idx = np.sort(self.spec_batch_idx)
-        # shuffle R and T.
-        # mat: #wls \cross #spec; pick out elem on the crossing of
-        # rows=wl_idx and cols=spec_idx. For selected wl, R and T
-        # are calculated simultaneously.
-        #
-        # The size of J is fixed but
-        # the stored grads are different in each epoch according to
-        # the random shuffle.
+
         self.wl_batch_idx = np.random.default_rng().choice(
             self.wl_num_min,
             self.batch_size_wl,
@@ -176,8 +177,21 @@ class AdamOptimizer(Optimizer):
 
 
 class AdamThicknessOptimizer(AdamOptimizer):
-    def __init__(self, film, target_spec_ls: Sequence[BaseSpectrum], max_steps, **kwargs):
-        super().__init__(film, target_spec_ls, max_steps, **kwargs)
+    def __init__(
+            self,
+            film,
+            target_spec_ls: Sequence[BaseSpectrum],
+            max_steps,
+            alpha=1,
+            **kwargs
+    ):
+        super().__init__(
+            film,
+            target_spec_ls,
+            max_steps,
+            alpha=alpha,
+            ** kwargs
+        )
         # avoid grad explode by asserting no total reflection
         n_min = film.calculate_n_inc(target_spec_ls[0].WLS)[0] * \
             np.sin(target_spec_ls[0].INC_ANG) if n_min == 0 else n_min
@@ -194,8 +208,21 @@ class AdamThicknessOptimizer(AdamOptimizer):
 
 
 class AdamFreeFormOptimizer(AdamOptimizer):
-    def __init__(self, film, target_spec_ls: Sequence[BaseSpectrum], max_steps, **kwargs):
-        super().__init__(film, target_spec_ls, max_steps, **kwargs)
+    def __init__(
+            self,
+            film: FreeFormFilm,
+            target_spec_ls: Sequence[BaseSpectrum],
+            max_steps,
+            alpha=0.1,
+            **kwargs
+    ):
+        super().__init__(
+            film,
+            target_spec_ls,
+            max_steps,
+            alpha=alpha,
+            **kwargs
+        )
         self.get_f = get_spectrum_simple
         self.get_J = get_jacobi_simple
 

@@ -3,7 +3,7 @@ sys.path.append('./designer/script/')
 sys.path.append('./')
 
 from design import DesignSimple, DesignForSpecSimple
-from optimizer.adam_d import adam_optimize
+from optimizer.arxiv.adam_d import adam_optimize
 from optimizer.adam_non_sgd import adam_optimize_non_sgd
 from optimizer.LM_gradient_descent import LM_optimize_d_simple
 from spectrum import Spectrum

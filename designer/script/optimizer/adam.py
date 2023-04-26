@@ -33,8 +33,8 @@ class AdamOptimizer(Optimizer):
         self.epsilon = 1e-8 if 'epsilon' not in kwargs else kwargs['epsilon']
 
         # user functionalities
-        self.do_record = False if 'record' not in kwargs else kwargs['record']
-        self.show = False if 'show' not in kwargs else kwargs['show']
+        self.is_recorded = False if 'record' not in kwargs else kwargs['record']
+        self.is_shown = False if 'show' not in kwargs else kwargs['show']
         self.records = []
 
         if 'optimize' in kwargs:
@@ -55,31 +55,34 @@ class AdamOptimizer(Optimizer):
         self.total_wl_num = self.batch_size_wl * self.batch_size_spec * 2  # R & T
 
         # initialize optimizer
-        self.best_loss = 0
         self.max_steps = max_steps
         self.max_patience = self.max_steps if 'patience' not in kwargs else kwargs['patience']
         self.current_patience = self.max_patience
         self._get_param()
+        # allocate space for f and J
         self.J = np.empty((self.total_wl_num, self.x.shape[0]))
         self.f = np.empty(self.total_wl_num)
+        # in case not do_record, return an empty ls
+        self._record()
 
-    def _get_param(self):
-        '''
-        Initialize x from film
-            (e.g. thickness vector in adam_d, refractive vector in adam_n)
-            and then empty J and f arrays could be initialized
-        '''
-        raise NotImplementedError
+    def optimize(self, **kwargs):
+        for self.i in range(self.max_steps):
+            self._optimize_step()
+            self._set_param()
+            if self.is_recorded:
+                self._record()
+            if self.is_shown:
+                self._show()
+            if not self._update_best_and_patience():
+                break
+        self.x = self.best_x
+        self._set_param()  # restore to best x
+        return self._rearrange_record()
 
-    @abstractmethod
-    def _set_param(self):
-        '''
-        Update film with current x
-        Along with different projection strategies
-        '''
-        raise NotImplementedError
+    def _loss(self):
+        return rms(self.f)
 
-    def optimize_step(self):
+    def _sgd(self):
         # shuffle for sgd
         self.spec_batch_idx = np.random.default_rng().choice(
             len(self.target_spec_ls),
@@ -102,6 +105,8 @@ class AdamOptimizer(Optimizer):
         )
         self.wl_batch_idx = np.sort(self.wl_batch_idx)
 
+    def _optimize_step(self):
+        self._sgd()  # make sgd params
         self.f = stack_f(
             self.f,
             self.n_arrs_ls,
@@ -130,33 +135,15 @@ class AdamOptimizer(Optimizer):
         self.x -= self.alpha * self.m_hat / \
             (np.sqrt(self.v_hat) + self.epsilon)
 
-    def optimize(self, **kwargs):
-        self._record()  # in case not do_record, return an empty ls
-        for self.i in range(self.max_steps):
-            self.optimize_step()
-            self._set_param()
-            if self.do_record:
-                self._record()
-            if self.show:
-                self._show()
-            if not self._update_best_and_patience():
-                break
-        self.x = self.best_x
-        self._set_param()  # restore to best x
-        return self._rearrange_record()
-
-    def _loss(self):
-        return rms(self.f)
-
     def _update_best_and_patience(self):
         cur_loss = self._loss()
-        if cur_loss > self.best_loss and self.i != 0:
-            self.current_patience -= 1
-        else:
+        if cur_loss < self.best_loss or self.i == 0:
             self.best_loss = cur_loss
             self.best_x = copy.deepcopy(self.x)
             self.best_i = self.i
             self.current_patience = self.max_patience
+        else:
+            self.current_patience -= 1
 
         return self.current_patience
 
@@ -169,6 +156,23 @@ class AdamOptimizer(Optimizer):
     def _show(self):
         print(
             f'iter {self.i}, loss {self._loss()}')
+
+    @abstractmethod
+    def _get_param(self):
+        '''
+        Initialize x from film
+            (e.g. thickness vector in adam_d, refractive vector in adam_n)
+            and then empty J and f arrays could be initialized
+        '''
+        raise NotImplementedError
+
+    @abstractmethod
+    def _set_param(self):
+        '''
+        Update film with current x
+        Along with different projection strategies
+        '''
+        raise NotImplementedError
 
 
 class AdamThicknessOptimizer(AdamOptimizer):

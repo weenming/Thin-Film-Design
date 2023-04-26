@@ -37,7 +37,7 @@ class Optimizer(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def optimize_step(self):
+    def _optimize_step(self):
         raise NotImplementedError
 
     def _rearrange_record(self):

@@ -2,7 +2,8 @@ import sys
 sys.path.append('./designer/script/')
 
 
-from tmm.get_jacobi_n_adjoint import get_jacobi_free_form, get_jacobi_simple
+from tmm.get_jacobi_n_adjoint import get_jacobi_free_form
+from tmm.get_jacobi import get_jacobi_simple
 from tmm.get_spectrum import get_spectrum_free, get_spectrum_simple
 
 from optimizer.grad_helper import stack_f, stack_J, stack_init_params
@@ -120,7 +121,11 @@ class AdamOptimizer(Optimizer):
         self.max_patience = self.max_steps if 'patience' not in kwargs else kwargs[
             'patience']
         self.current_patience = self.max_patience
-        self._get_param()
+        self.best_loss = 0.
+        self.m = 0
+        self.v = 0  # adam hyperparameters
+        self.n_arrs_ls = stack_init_params(self.film, self.target_spec_ls)
+        self._get_param()  # init variable x
         # allocate space for f and J
         self.J = np.empty((self.total_wl_num, self.x.shape[0]))
         self.f = np.empty(self.total_wl_num)
@@ -141,8 +146,9 @@ class AdamOptimizer(Optimizer):
         self._set_param()  # restore to best x
         return self._rearrange_record()
 
-    def _loss(self):
-        return rms(self.f)
+    def _validate_loss(self):
+        # return rms(self.f) THIS IS WRONG! should calculate on val set
+        return calculate_RMS_f_spec(self.film, self.target_spec_ls)
 
     def _sgd(self):
         '''
@@ -170,7 +176,7 @@ class AdamOptimizer(Optimizer):
 
     def _optimize_step(self):
         self._sgd()  # make sgd params
-        self.f = stack_f(
+        stack_f(
             self.f,
             self.n_arrs_ls,
             self.film.get_d(),
@@ -179,7 +185,7 @@ class AdamOptimizer(Optimizer):
             wl_batch_idx=self.wl_batch_idx,
             get_f=self.get_f
         )
-        self.J = stack_J(
+        stack_J(
             self.J,
             self.n_arrs_ls,
             self.film.get_d(),
@@ -199,7 +205,7 @@ class AdamOptimizer(Optimizer):
             (np.sqrt(self.v_hat) + self.epsilon)
 
     def _update_best_and_patience(self):
-        cur_loss = self._loss()
+        cur_loss = self._validate_loss()
         if cur_loss < self.best_loss or self.i == 0:
             self.best_loss = cur_loss
             self.best_x = copy.deepcopy(self.x)
@@ -208,17 +214,23 @@ class AdamOptimizer(Optimizer):
         else:
             self.current_patience -= 1
 
-        return self.current_patience
+        return self.current_patience > 0
 
     def _record(self):
-        self.records.append([
-            copy.deepcopy(self.film),
-            self._loss()
-        ])
+        if len(self.records) != 0:
+            self.records.append([
+                copy.deepcopy(self.film),
+                self._validate_loss()
+            ])
+        else:
+            self.records.append([
+                copy.deepcopy(self.film),
+                calculate_RMS_f_spec(self.film, self.target_spec_ls)
+            ])
 
     def _show(self):
         print(
-            f'iter {self.i}, loss {self._loss()}')
+            f'iter {self.i}, loss {self._validate_loss()}')
 
     @abstractmethod
     def _get_param(self):

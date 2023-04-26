@@ -13,7 +13,29 @@ The aim of this project is
   - lower total optical thickness
   - lower layer numbers
   - fewer "too thin" layers which is impractical in realistic manufacture.
+## Usage
+To get started with the Thin-Film-Design library, follow these steps:
 
+1. Import the required classes and functions from the library:
+  ```
+  from optimizer import Optimizer, AdamOptimizer
+  from spectrum import BaseSpectrum
+  from film import FreeFormFilm, TwoMaterialFilm
+  ```
+2. Define your thin film stack structure and target spectra:
+  ```
+  film = FreeFormFilm(...)
+  target_spec_ls = [BaseSpectrum(...), ...]
+  ```
+
+3. Initialize an optimizer with the film and target spectra:
+  ```
+  optimizer = AdamOptimizer(film, target_spec_ls, max_steps=...)
+  ```
+4. Run the optimization process：
+  ```
+  optimizer.optimize()
+  ```
 ## Dependencies
 
 Run on a machine supporting CUDA
@@ -23,11 +45,12 @@ Run on a machine supporting CUDA
 - cudatoolkit
 - matplotlib
 
-Use `conda create -n TFNN python=3.9 ipykernel scipy numpy=1.23 numba=0.56.4 matplotlib cudatoolkit=*the cuda version of the driver* ipykernel -c conda-forge`
+Use `conda create -n TFNN python=3.9 ipykernel scipy numpy=1.23 numba=0.56.4 matplotlib cudatoolkit=*the cuda version of the driver* -c conda-forge` or `conda env create --file=environments.yml`. 
 
 Note that the version of cudatoolkit should match that of the version of the driver, which can be found by the tool `nvidia-smi`
 
 > It works out of the box for CUDA C/C++ as far as I am aware - however, because Numba doesn't know anything about forward compatibility it always tries to generate PTX for the latest version supported by the toolkit and not the driver, so the driver refuses to accept it for linking [Thread](https://github.com/numba/numba/issues/7006)
+
 
 ## File structure
 

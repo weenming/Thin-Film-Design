@@ -26,14 +26,17 @@ class Optimizer(ABC):
 
     @abstractmethod
     def _record(self):
+        '''Add information to be recorded to self.records.'''
         raise NotImplementedError
 
     @abstractmethod
     def _show(self):
+        '''Shows the information user would like to see.'''
         raise NotImplementedError
 
     @abstractmethod
     def optimize(self, **kwargs):
+        '''Executes the optimization process.'''
         raise NotImplementedError
 
     @abstractmethod
@@ -41,6 +44,12 @@ class Optimizer(ABC):
         raise NotImplementedError
 
     def _rearrange_record(self):
+        '''Change records' first axis from iteration to info type.
+
+        However, historically, the expected return value is  unpacked by 
+        callee. The conversion is a transpose if we pretend the list to be 
+        an array.
+        '''
         return [record_i for record_i in zip(self.records)]
 
     def __call__(self, **kwargs):

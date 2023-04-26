@@ -1,0 +1,5 @@
+target:
+np.random.seed(2)
+d = np.random.random(6)
+d *= 600 / d.sum()
+target_film = TwoMaterialFilm('2', '1', 'SiO2', d)

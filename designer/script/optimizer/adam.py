@@ -199,8 +199,8 @@ class AdamOptimizer(Optimizer):
         self.g = self.J.T @ self.f
         self.m = self.beta1 * self.m + (1 - self.beta1) * self.g
         self.v = self.beta2 * self.v + (1 - self.beta2) * self.g ** 2
-        self.m_hat = self.m / (1 - self.beta1)
-        self.v_hat = self.v / (1 - self.beta2)
+        self.m_hat = self.m / (1 - self.beta1 ** (self.i + 1))
+        self.v_hat = self.v / (1 - self.beta2 ** (self.i + 1))
         self.x -= self.alpha * self.m_hat / \
             (np.sqrt(self.v_hat) + self.epsilon)
 

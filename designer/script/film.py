@@ -12,10 +12,27 @@ class BaseFilm(ABC):
     d: NDArray
     spectrums: list[SpectrumSimple]
 
-    def __init__(self):
-        pass
+    def __init__(self, substrate, incidence):
+        self._register_get_n('sub', substrate)
+        self._register_get_n('inc', incidence)
+
+    def _register_get_n(self, name: str, material):
+        if material is str:
+            try:
+                exec(f"self.get_n_{name} = get_n.get_n_{material}")
+            except:
+                raise ValueError(
+                    "Material not found. \
+                    Dispersion must have been defined in gets.get_n")
+        elif material is int or material is float:
+            exec(
+                f"self.get_n_{name} = lambda wl: return wl * {float(material)} / wl")
+        else:
+            raise ValueError(
+                'bad material. should be either name defined in utils.get_n or a float')
 
     # spectrum-related methods
+
     def add_spec_param(self, inc_ang, wls):
         """
         Setter of the spectrum params: wls and inc
@@ -149,6 +166,8 @@ class FreeFormFilm(BaseFilm):
 
 
         '''
+        super().__init__(substrate, incidence)  # register sub and inc
+
         if allowed_materials is not None:
             raise NotImplementedError
         self.d = np.ones(init_n_ls.shape[0], dtype='float')
@@ -156,13 +175,6 @@ class FreeFormFilm(BaseFilm):
         init_n_ls = init_n_ls.astype('complex128')
         self.n = init_n_ls
         self.spectrums = []
-        try:
-            exec(f"self.get_n_sub = get_n.get_n_{substrate}")
-            exec(f"self.get_n_inc = get_n.get_n_{incidence}")
-        except:
-            raise ValueError(
-                "Material not found. \
-                    Dispersion must have been defined in gets.get_n")
 
     def calculate_n_array(self, wls: NDArray):
         n_arr = np.empty((wls.shape[0], self.get_layer_number()),
@@ -231,15 +243,9 @@ class TwoMaterialFilm(BaseFilm):
         d_init: NDArray,
         incidence='Air'
     ):
-        try:
-            exec(f"self.get_n_A = get_n.get_n_{A}")
-            exec(f"self.get_n_B = get_n.get_n_{B}")
-            exec(f"self.get_n_sub = get_n.get_n_{substrate}")
-            exec(f"self.get_n_inc = get_n.get_n_{incidence}")
-        except:
-            raise ValueError(
-                "Material not found. \
-                    Dispersion must have been defined in gets.get_n")
+        super().__init__(substrate, incidence)  # register sub and inc
+        self._register_get_n('A', A)
+        self._register_get_n('B', B)
 
         if d_init.shape == ():
             d_init = np.array([d_init])

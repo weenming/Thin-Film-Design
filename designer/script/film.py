@@ -17,16 +17,16 @@ class BaseFilm(ABC):
         self._register_get_n('inc', incidence)
 
     def _register_get_n(self, name: str, material):
-        if material is str:
+        if type(material) is str:
             try:
                 exec(f"self.get_n_{name} = get_n.get_n_{material}")
             except:
                 raise ValueError(
                     "Material not found. \
                     Dispersion must have been defined in gets.get_n")
-        elif material is int or material is float:
+        elif type(material) is int or type(material) is float:
             exec(
-                f"self.get_n_{name} = lambda wl: return wl * {float(material)} / wl")
+                f"self.get_n_{name} = lambda wl: wl * {float(material)} / wl")
         else:
             raise ValueError(
                 'bad material. should be either name defined in utils.get_n or a float')
@@ -184,7 +184,9 @@ class FreeFormFilm(BaseFilm):
         return n_arr
 
     def get_optical_thickness(self, wl, neglect_last_layer=False) -> float:
-        return self.d * self.calculate_n_array(np.array([wl]))[:, 0]
+        if neglect_last_layer:
+            raise NotImplementedError
+        return (self.d * self.calculate_n_array(np.array([wl]))[0, :].real).sum()
 
     def update_n(self, n_new):
         self.n = n_new
@@ -360,3 +362,31 @@ class TwoMaterialFilm(BaseFilm):
     def calculate_spectrum(self):
         for s in self.spectrums:
             s.calculate(get_spectrum.get_spectrum_simple)
+
+
+class EqOTFilm(FreeFormFilm):
+    '''
+    Free Form film, but constrain \tau_i same instead of di same.
+    '''
+
+    def __init__(
+        self,
+        init_n_ls: NDArray,
+        total_ot,
+        substrate: str,
+        incidence='Air',
+        allowed_materials=None
+    ):
+        WAHTEVER_WL = 1000
+
+        super().__init__(
+            init_n_ls,
+            total_ot,
+            substrate,
+            incidence,
+            allowed_materials
+        )  # register sub and inc
+
+        self.d /= self.get_n().real
+        self.d *= total_ot / \
+            self.get_optical_thickness(WAHTEVER_WL)

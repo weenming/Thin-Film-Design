@@ -24,7 +24,7 @@ class BaseFilm(ABC):
                 raise ValueError(
                     "Material not found. \
                     Dispersion must have been defined in gets.get_n")
-        elif type(material) is int or type(material) is float:
+        elif type(float(material)) is float:
             exec(
                 f"self.get_n_{name} = lambda wl: wl * {float(material)} / wl")
         else:

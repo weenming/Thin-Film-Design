@@ -194,6 +194,13 @@ class FreeFormFilm(BaseFilm):
             s.outdate()
 
     def get_n(self):
+        '''
+            Returns 1-d array of refractive indices.
+            
+            Because FreeFormFilm contains only non-dispersive materials IN the 
+            film stack (substrate and incidence can be dispersive though)
+            the n_array is duplicate along axis 0. 
+        '''
         return self.n
 
     def calculate_spectrum(self):

@@ -12,10 +12,27 @@ class BaseFilm(ABC):
     d: NDArray
     spectrums: list[SpectrumSimple]
 
-    def __init__(self):
-        pass
+    def __init__(self, substrate, incidence):
+        self._register_get_n('sub', substrate)
+        self._register_get_n('inc', incidence)
+
+    def _register_get_n(self, name: str, material):
+        if type(material) is str:
+            try:
+                exec(f"self.get_n_{name} = get_n.get_n_{material}")
+            except:
+                raise ValueError(
+                    "Material not found. \
+                    Dispersion must have been defined in gets.get_n")
+        elif type(float(material)) is float:
+            exec(
+                f"self.get_n_{name} = lambda wl: wl * {float(material)} / wl")
+        else:
+            raise ValueError(
+                'bad material. should be either name defined in utils.get_n or a float')
 
     # spectrum-related methods
+
     def add_spec_param(self, inc_ang, wls):
         """
         Setter of the spectrum params: wls and inc
@@ -149,6 +166,8 @@ class FreeFormFilm(BaseFilm):
 
 
         '''
+        super().__init__(substrate, incidence)  # register sub and inc
+
         if allowed_materials is not None:
             raise NotImplementedError
         self.d = np.ones(init_n_ls.shape[0], dtype='float')
@@ -156,13 +175,6 @@ class FreeFormFilm(BaseFilm):
         init_n_ls = init_n_ls.astype('complex128')
         self.n = init_n_ls
         self.spectrums = []
-        try:
-            exec(f"self.get_n_sub = get_n.get_n_{substrate}")
-            exec(f"self.get_n_inc = get_n.get_n_{incidence}")
-        except:
-            raise ValueError(
-                "Material not found. \
-                    Dispersion must have been defined in gets.get_n")
 
     def calculate_n_array(self, wls: NDArray):
         n_arr = np.empty((wls.shape[0], self.get_layer_number()),
@@ -172,7 +184,9 @@ class FreeFormFilm(BaseFilm):
         return n_arr
 
     def get_optical_thickness(self, wl, neglect_last_layer=False) -> float:
-        return self.d * self.calculate_n_array(np.array([wl]))[:, 0]
+        if neglect_last_layer:
+            raise NotImplementedError
+        return (self.d * self.calculate_n_array(np.array([wl]))[0, :].real).sum()
 
     def update_n(self, n_new):
         self.n = n_new
@@ -180,6 +194,13 @@ class FreeFormFilm(BaseFilm):
             s.outdate()
 
     def get_n(self):
+        '''
+            Returns 1-d array of refractive indices.
+            
+            Because FreeFormFilm contains only non-dispersive materials IN the 
+            film stack (substrate and incidence can be dispersive though)
+            the n_array is duplicate along axis 0. 
+        '''
         return self.n
 
     def calculate_spectrum(self):
@@ -231,15 +252,9 @@ class TwoMaterialFilm(BaseFilm):
         d_init: NDArray,
         incidence='Air'
     ):
-        try:
-            exec(f"self.get_n_A = get_n.get_n_{A}")
-            exec(f"self.get_n_B = get_n.get_n_{B}")
-            exec(f"self.get_n_sub = get_n.get_n_{substrate}")
-            exec(f"self.get_n_inc = get_n.get_n_{incidence}")
-        except:
-            raise ValueError(
-                "Material not found. \
-                    Dispersion must have been defined in gets.get_n")
+        super().__init__(substrate, incidence)  # register sub and inc
+        self._register_get_n('A', A)
+        self._register_get_n('B', B)
 
         if d_init.shape == ():
             d_init = np.array([d_init])
@@ -354,3 +369,31 @@ class TwoMaterialFilm(BaseFilm):
     def calculate_spectrum(self):
         for s in self.spectrums:
             s.calculate(get_spectrum.get_spectrum_simple)
+
+
+class EqOTFilm(FreeFormFilm):
+    '''
+    Free Form film, but constrain \tau_i same instead of di same.
+    '''
+
+    def __init__(
+        self,
+        init_n_ls: NDArray,
+        total_ot,
+        substrate: str,
+        incidence='Air',
+        allowed_materials=None
+    ):
+        WAHTEVER_WL = 1000
+
+        super().__init__(
+            init_n_ls,
+            total_ot,
+            substrate,
+            incidence,
+            allowed_materials
+        )  # register sub and inc
+
+        self.d /= self.get_n().real
+        self.d *= total_ot / \
+            self.get_optical_thickness(WAHTEVER_WL)

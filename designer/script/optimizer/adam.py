@@ -13,7 +13,7 @@ from film import FreeFormFilm, TwoMaterialFilm
 import numpy as np
 from typing import Sequence
 import copy
-from optimizer.optimizer import Optimizer
+from optimizer.optimizer import GradientOptimizer
 from abc import abstractmethod
 
 """adam.py - Adam optimizer for thin film properties.
@@ -26,7 +26,7 @@ class defined in optimizer.py.
 """
 
 
-class AdamOptimizer(Optimizer):
+class AdamOptimizer(GradientOptimizer):
     """
     Implements the Adam optimization algorithm for thin film properties.
 
@@ -85,36 +85,13 @@ class AdamOptimizer(Optimizer):
         max_steps,
         **kwargs
     ):
-        super().__init__(film, target_spec_ls)
+        super().__init__(film, target_spec_ls, max_steps, **kwargs)
 
         # adam hyperparameters
         self.alpha = 0.001 if 'alpha' not in kwargs else kwargs['alpha']
         self.beta1 = 0.9 if 'beta1' not in kwargs else kwargs['beta1']
         self.beta2 = 0.999 if 'beta2' not in kwargs else kwargs['beta2']
         self.epsilon = 1e-8 if 'epsilon' not in kwargs else kwargs['epsilon']
-
-        # user functionalities
-        self.is_recorded = False if 'record' not in kwargs else kwargs['record']
-        self.is_shown = False if 'show' not in kwargs else kwargs['show']
-        self.records = []
-
-        if 'optimize' in kwargs:
-            # not sure if this is allowed
-            self.optimize = kwargs['optimize']
-
-        # check batch size
-        self.wl_num_min = np.min([s.WLS.shape[0] for s in target_spec_ls])
-        if 'batch_size_spec' not in kwargs:
-            self.batch_size_spec = len(target_spec_ls)
-        else:
-            self.batch_size_spec = kwargs['batch_size_wl']
-        if 'batch_size_wl' not in kwargs:
-            self.batch_size_wl = self.wl_num_min
-        else:
-            self.batch_size_wl = kwargs['batch_size_wl']
-        assert self.batch_size_spec <= len(target_spec_ls) \
-            and self.batch_size_wl <= self.wl_num_min  # spec with smallest wl
-        self.total_wl_num = self.batch_size_wl * self.batch_size_spec * 2  # R & T
 
         # initialize optimizer
         self.max_steps = max_steps
@@ -125,14 +102,17 @@ class AdamOptimizer(Optimizer):
         self.m = 0
         self.v = 0  # adam hyperparameters
         self.n_arrs_ls = stack_init_params(self.film, self.target_spec_ls)
+
         self._get_param()  # init variable x
+
         # allocate space for f and J
         self.J = np.empty((self.total_wl_num, self.x.shape[0]))
         self.f = np.empty(self.total_wl_num)
-        # in case not do_record, return an empty ls
-        self._record()
 
     def optimize(self):
+        # in case not do_record, return [initial film], [initial loss]
+        self._record()
+
         for self.i in range(self.max_steps):
             self._optimize_step()
             self._set_param()
@@ -150,7 +130,7 @@ class AdamOptimizer(Optimizer):
         # return rms(self.f) THIS IS WRONG! should calculate on val set
         return calculate_RMS_f_spec(self.film, self.target_spec_ls)
 
-    def _sgd(self):
+    def _mini_batching(self):
         '''
         Make mini-batches.
         mat: #wls \cross #spec; pick out elem on the crossing of
@@ -175,7 +155,7 @@ class AdamOptimizer(Optimizer):
         self.wl_batch_idx = np.sort(self.wl_batch_idx)
 
     def _optimize_step(self):
-        self._sgd()  # make sgd params
+        self._mini_batching()  # make sgd params
         stack_f(
             self.f,
             self.n_arrs_ls,
@@ -199,55 +179,10 @@ class AdamOptimizer(Optimizer):
         self.g = self.J.T @ self.f
         self.m = self.beta1 * self.m + (1 - self.beta1) * self.g
         self.v = self.beta2 * self.v + (1 - self.beta2) * self.g ** 2
-        self.m_hat = self.m / (1 - self.beta1)
-        self.v_hat = self.v / (1 - self.beta2)
+        self.m_hat = self.m / (1 - self.beta1 ** (self.i + 1))
+        self.v_hat = self.v / (1 - self.beta2 ** (self.i + 1))
         self.x -= self.alpha * self.m_hat / \
             (np.sqrt(self.v_hat) + self.epsilon)
-
-    def _update_best_and_patience(self):
-        cur_loss = self._validate_loss()
-        if cur_loss < self.best_loss or self.i == 0:
-            self.best_loss = cur_loss
-            self.best_x = copy.deepcopy(self.x)
-            self.best_i = self.i
-            self.current_patience = self.max_patience
-        else:
-            self.current_patience -= 1
-
-        return self.current_patience > 0
-
-    def _record(self):
-        if len(self.records) != 0:
-            self.records.append([
-                copy.deepcopy(self.film),
-                self._validate_loss()
-            ])
-        else:
-            self.records.append([
-                copy.deepcopy(self.film),
-                calculate_RMS_f_spec(self.film, self.target_spec_ls)
-            ])
-
-    def _show(self):
-        print(
-            f'iter {self.i}, loss {self._validate_loss()}')
-
-    @abstractmethod
-    def _get_param(self):
-        '''
-        Initialize x from film
-            (e.g. thickness vector in adam_d, refractive vector in adam_n)
-            and then empty J and f arrays could be initialized
-        '''
-        raise NotImplementedError
-
-    @abstractmethod
-    def _set_param(self):
-        '''
-        Update film with current x
-        Along with different projection strategies
-        '''
-        raise NotImplementedError
 
 
 class AdamThicknessOptimizer(AdamOptimizer):

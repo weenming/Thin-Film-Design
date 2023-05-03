@@ -6,22 +6,29 @@ sys.path.append('./../')
 sys.path.append('./../../')
 from spectrum import Spectrum
 from design import BaseDesign
+from film import TwoMaterialFilm
 
 
-def make_edgefilter_design(init_film):
-    inc_ang = 0.
-    wls = np.linspace(400, 1000, 500)  # when wls = 50, ~100 min
+whatever_film = TwoMaterialFilm('1', '2', '1', np.array([1, 1]))
+
+def make_edgefilter_design(
+        init_film=whatever_film,
+        wls=np.linspace(400, 1000, 500),
+        inc_angs=[0]
+):
     # R = np.ones(wls.shape[0] , dtype='float')
     R = np.zeros(wls.shape[0], dtype='float')
     R[wls.shape[0] // 2:] = 1.
-    target_spec = [Spectrum(inc_ang, wls, R)]
+    target_spec = []
+    for inc_ang in inc_angs:
+        target_spec.append(Spectrum(inc_ang, wls, R))
 
     design = BaseDesign(target_spec, init_film)
     return design
 
 
 def make_reflection_design(
-        init_film,
+        init_film=whatever_film,
         wls=np.linspace(695, 939, 500)
 ) -> BaseDesign:
     inc_ang = 0.
@@ -34,7 +41,7 @@ def make_reflection_design(
     return design
 
 
-def make_three_line_filter_design(init_film):
+def make_three_line_filter_design(init_film=whatever_film):
     inc_ang = 0.
 
     def make_r_spec(wl_1, wl_2):

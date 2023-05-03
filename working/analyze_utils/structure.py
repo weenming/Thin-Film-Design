@@ -3,6 +3,7 @@ import numpy as np
 from film import TwoMaterialFilm, BaseFilm
 import matplotlib.pyplot as plt
 from design import BaseDesign
+import copy
 
 
 # TODO: optimize metric: calculate structure in smaller or larger thickness?
@@ -166,13 +167,35 @@ def _calculate_structure_difference_simple_film_RMS(d1, n1_ls, d2, n2_ls, n_sub)
     return np.sqrt(diff)
 
 
-def plot_layer_thickness(film: BaseFilm):
-    # wl: middle wl of the first spec
-    d = film.get_d()
-    spec = film.get_all_spec_list()[0]
-    n_arr = film.calculate_n_array(spec.WLS)[spec.WLS.shape[0] // 2, :]
-    n_inc = film.calculate_n_inc(spec.WLS)[spec.WLS.shape[0] // 2]
-    n_sub = film.calculate_n_sub(spec.WLS)[spec.WLS.shape[0] // 2]
+def plot_layer_thickness(film: BaseFilm, n_at_wl=1000,
+                         truncate_thickness=float('inf')):
+    '''
+    Plots the refractive index distribution
+
+    Args:
+        film (BaseFilm): film structure to show
+        n_at_wl (float): middle wl of the first spec
+    '''
+    # get d vector
+    if truncate_thickness != float('inf'):
+        d = copy.deepcopy(film).get_d()
+        sum = 0
+        for j, di in enumerate(d):
+            if sum > truncate_thickness:
+                break
+            sum += di
+        d = d[:j]
+    else:
+        d = film.get_d()
+
+    try:
+        spec = film.get_all_spec_list()[0]
+        n_at_wl = spec.WLS[spec.WLS.shape[0] // 2, :]
+    except IndexError as e:
+        print(f'film has no spec. use {n_at_wl} nm')
+    n_arr = film.calculate_n_array(np.array([n_at_wl]))[0, :]
+    n_inc = film.calculate_n_inc(np.array([n_at_wl]))[0]
+    n_sub = film.calculate_n_sub(np.array([n_at_wl]))[0]
 
     fig, ax = plt.subplots(1, 1)
     cur_d = 0
@@ -190,7 +213,7 @@ def plot_layer_thickness(film: BaseFilm):
     ax.set_xlabel('position / nm')
     ax.set_xlim(0, None)
     ax.set_title(
-        f'refractive index distribution at {spec.WLS[spec.WLS.shape[0] // 2]: .0f} nm')
+        f'refractive index distribution at {n_at_wl: .0f} nm')
     fig.set_size_inches(6, 1)
     return ax, fig
 

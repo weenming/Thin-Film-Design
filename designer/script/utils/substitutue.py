@@ -38,7 +38,7 @@ def search_ot_substitution(f: TwoMaterialFilm, d_min):
             n_arr = f.calculate_n_array(np.array([750]))
             optical_ratio = n_arr[0, i + 1] / n_arr[0, i]
             m = calculate_RMS(f, f_origin)
-
+            best_m = 0
             for r in np.linspace(0, d_min * 10, 10):
                 d_tmp = d.copy()
                 # substitute
@@ -75,8 +75,8 @@ def optimal_and_thin_film_approx_substitution_onestep_new(f: TwoMaterialFilm, d_
     d = f.get_d()
     spec = f.get_spec()
     count = 0
-    ratios = []
-    delete_indices = []
+    ratios: list[float] = []
+    delete_indices: list[int] = []
     i = 1
     while i < d.shape[0]:
         if f.get_d()[i] < d_min:
@@ -108,10 +108,11 @@ def optimal_and_thin_film_approx_substitution_onestep_new(f: TwoMaterialFilm, d_
 
 def calculate_dB(spec: SpectrumSimple, d, layer_index):
     i = layer_index
+    n = spec.film.calculate_n_array(spec.WLS)
     Q1 = get_W.get_W_before_ith_layer(
         spec.WLS,
         d,
-        spec.n,
+        n,
         spec.n_sub,
         spec.n_inc,
         spec.INC_ANG,
@@ -121,15 +122,15 @@ def calculate_dB(spec: SpectrumSimple, d, layer_index):
     Q2 = get_W.get_W_after_ith_layer(
         spec.WLS,
         d,
-        spec.n,
+        n,
         spec.n_sub,
         spec.n_inc,
         spec.INC_ANG,
         i
     )
 
-    nB = np.repeat(spec.n[:, i + 1], 2, axis=0)
-    nA = np.repeat(spec.n[:, i], 2, axis=0)
+    nB = np.repeat(n[:, i + 1], 2, axis=0)
+    nA = np.repeat(n[:, i], 2, axis=0)
     n_inc = np.repeat(spec.n_inc, 2, axis=0)
     cosA = np.sqrt(1 - ((n_inc / nA) * np.sin(spec.INC_ANG)) ** 2)
     cosB = np.sqrt(1 - ((n_inc / nB) * np.sin(spec.INC_ANG)) ** 2)

@@ -41,7 +41,7 @@ class BaseFilm(ABC):
 
         for s in self.spectrums:
             if np.array_equal(s.WLS, wls) and s.INC_ANG == inc_ang:
-                return
+                return s
         spec = SpectrumSimple(inc_ang, wls, self)
         self.spectrums.append(spec)
         return spec
@@ -196,7 +196,7 @@ class FreeFormFilm(BaseFilm):
     def get_n(self):
         '''
             Returns 1-d array of refractive indices.
-            
+
             Because FreeFormFilm contains only non-dispersive materials IN the 
             film stack (substrate and incidence can be dispersive though)
             the n_array is duplicate along axis 0. 

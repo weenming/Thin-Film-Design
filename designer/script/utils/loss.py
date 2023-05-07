@@ -42,6 +42,9 @@ def calculate_RMS_f_spec(film: BaseFilm, specs: Sequence[BaseSpectrum]):
     T_1 = np.array([])
     T_2 = np.array([])
 
+    assert type(
+        specs) is list, 'Target spectrums should be python list even if only one spectrum is target!'
+
     for spec in specs:
         # target spectrum params
         inc_ang, wls = spec.INC_ANG, spec.WLS

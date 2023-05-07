@@ -1,0 +1,4 @@
+In fact the lr and max epoch in GD is crucial param. See large OT result, might gain sparsity.
+
+An argmin_{OT} of L can emerge due to bad training (not yet converge / jumpy out of better min / small lr etc.) 
+I believe global min descents as OT increases (which can be easily seen by a thought experiment: min contained in smaller param space is certainly contained in larger ones).

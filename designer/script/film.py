@@ -13,6 +13,7 @@ class BaseFilm(ABC):
     spectrums: list[SpectrumSimple]
 
     def __init__(self, substrate, incidence):
+        self.materials = {}
         self._register_get_n('sub', substrate)
         self._register_get_n('inc', incidence)
 
@@ -20,6 +21,7 @@ class BaseFilm(ABC):
         if type(material) is str:
             try:
                 exec(f"self.get_n_{name} = get_n.get_n_{material}")
+                self.materials[name] = material
             except:
                 raise ValueError(
                     "Material not found. \
@@ -27,6 +29,7 @@ class BaseFilm(ABC):
         elif type(float(material)) is float:
             exec(
                 f"self.get_n_{name} = lambda wl: wl * {float(material)} / wl")
+            self.materials[name] = material
         else:
             raise ValueError(
                 'bad material. should be either name defined in utils.get_n or a float')
@@ -206,6 +209,29 @@ class FreeFormFilm(BaseFilm):
     def calculate_spectrum(self):
         for s in self.spectrums:
             s.calculate(get_spectrum.get_spectrum_free)
+
+    def project_to_two_material_film(self, n1, n2, material1=None, material2=None):
+        if n1 < n2:  # assume n1 > n2
+            n1, n2 = n2, n1
+            material1, material2 = material2, material1
+
+        is_high = (self.get_n() > ((n1 + n2) / 2))
+        each_d = self.get_d()[0]
+        new_d = np.array([0])  # assume first layer: high refractive index (n1)
+        now_high = True
+        for i in range(self.get_layer_number()):
+            if (is_high[i] and now_high) or (not is_high[i] and not now_high):
+                new_d[-1] += each_d
+            else:
+                now_high = not now_high
+                new_d = np.append(new_d, each_d)
+        if material1 is not None and material2 is not None:
+            new_film = TwoMaterialFilm(
+                material1, material2, self.materials['sub'], new_d)
+        else:
+            new_film = TwoMaterialFilm(n1, n2, self.materials['sub'], new_d)
+
+        return new_film
 
 
 class TwoMaterialFilm(BaseFilm):

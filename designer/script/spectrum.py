@@ -41,8 +41,6 @@ class Spectrum(BaseSpectrum):
     def __init__(self, incident_angle, wavelengths, spec_R, spec_T=None):
         if spec_T is None:
             spec_T = 1 - spec_R
-        else:
-            spec_T = spec_T
 
         super().__init__(incident_angle, wavelengths, spec_R, spec_T)
 

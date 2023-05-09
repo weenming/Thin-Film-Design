@@ -52,9 +52,15 @@ class Optimizer(ABC):
         an array.
         '''
         return [record_i for record_i in zip(*self.records)]
-
+    
+    @abstractmethod
+    def _validate_loss(self):
+        raise NotImplementedError
+    
     def __call__(self, **kwargs):
         return self.optimize(**kwargs)
+    
+    
 
 
 class GradientOptimizer(Optimizer):
@@ -107,7 +113,7 @@ class GradientOptimizer(Optimizer):
         else:
             self.records.append([
                 copy.deepcopy(self.film),
-                calculate_RMS_f_spec(self.film, self.target_spec_ls)
+                self._validate_loss()
             ])
 
     def _show(self):

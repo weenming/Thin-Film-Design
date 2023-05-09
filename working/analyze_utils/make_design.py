@@ -45,17 +45,17 @@ def make_three_line_filter_design(init_film=whatever_film):
     inc_ang = 0.
 
     def make_r_spec(wl_1, wl_2):
-        wls = np.linspace(wl_1, wl_2, 2 * int(wl_2 - wl_1))
+        wls = np.linspace(wl_1, wl_2, 10 * int(wl_2 - wl_1))
         R = np.ones(wls.shape[0], dtype='float')
         return R
 
     def make_t_spec(wl_1, wl_2):
-        wls = np.linspace(wl_1, wl_2, 2 * int(wl_2 - wl_1))
-        R = np.zeros(wls.shape[0], dtype='float')
-        return R
+        wls = np.linspace(wl_1, wl_2, 10 * int(wl_2 - wl_1))
+        T = np.zeros(wls.shape[0], dtype='float')
+        return T
 
     def make_wl(x1, x2): return np.linspace(
-        x1, x2, 2 * int(x2 - x1), dtype='float')
+        x1, x2, 10 * int(x2 - x1), dtype='float')
 
     wls, R = np.array([]), np.array([])
 

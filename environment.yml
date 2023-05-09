@@ -1,15 +1,15 @@
 name:
-  - Thin-Film-Design
+    - Thin-Film-Design
 channels:
-  - conda-forge
+    - conda-forge
 dependencies:
-  - python=3.9 
-  - ipykernel 
-  - scipy
-  - numpy=1.23 
-  - numba=0.56.4
-  - matplotlib 
-  # You may need to change the following line according the
-  # version of the CUDA driver! 
-  # CUDA driver version can be found using nvidia-smi.
-  - cudatoolkit=11.7 
+    - python=3.10
+    - ipykernel
+    - scipy
+    - numpy=1.23
+    - numba=0.56.4
+    - matplotlib
+    # You may need to change the following line according the
+    # version of the CUDA driver!
+    # CUDA driver version can be found using nvidia-smi.
+    - cudatoolkit=11.7

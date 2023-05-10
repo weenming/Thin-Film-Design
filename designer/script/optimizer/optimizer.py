@@ -70,6 +70,7 @@ class GradientOptimizer(Optimizer):
         # user functionalities
         self.is_recorded = False if 'record' not in kwargs else kwargs['record']
         self.is_shown = False if 'show' not in kwargs else kwargs['show']
+        self.shown_condition = lambda x: True if 'show_condition' not in kwargs else kwargs['show_condition']
         self.records: list[list] = []
 
         # check batch size
@@ -117,8 +118,9 @@ class GradientOptimizer(Optimizer):
             ])
 
     def _show(self):
-        print(
-            f'iter {self.i}, loss {self._validate_loss()}')
+        if self.shown_condition(self.i):
+            print(
+                f'iter {self.i}, loss {self._validate_loss()}')
 
     @abstractmethod
     def _get_param(self):

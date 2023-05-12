@@ -89,4 +89,4 @@ Note that the version of cudatoolkit should match that of the version of the dri
 - gradient for insertions in needle method.
 
 ## To-do
-- refactor of optimizer
+- parallelize inc ang

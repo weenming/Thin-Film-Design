@@ -1,4 +1,6 @@
 import pickle
+import dill
+
 
 
 def save(fname, *objs):
@@ -7,13 +9,17 @@ def save(fname, *objs):
         dict[i] = o
 
     with open(fname, 'wb') as f:
-        pickle.dump(dict, f)
+        dill.dump(dict, f)
 
 
 def load(fname):
-    with open(fname, 'rb') as f:
-        res = pickle.load(f)
-
+    try:
+        with open(fname, 'rb') as f:
+            res = dill.load(f)
+    except Exception as e:
+        print('Trying to load as pickled obj')
+        with open(fname, 'rb') as f:
+            res = pickle.load(f)
     ret_objs = []
     for key in res:
         ret_objs.append(res[key])

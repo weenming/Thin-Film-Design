@@ -23,6 +23,7 @@ class Optimizer(ABC):
         target_spec_ls: Sequence[BaseSpectrum],
     ):
         self.film = film
+        assert type(target_spec_ls) == list, 'must initialize optimizer with a list of Spectrums'
         self.target_spec_ls = target_spec_ls
 
     @abstractmethod

@@ -11,19 +11,16 @@ from film import TwoMaterialFilm
 
 whatever_film = TwoMaterialFilm('1', '2', '1', np.array([1, 1]))
 
+
 def make_edgefilter_design(
         init_film=whatever_film,
         wls=np.linspace(400, 1000, 500),
         inc_angs=[0]
 ):
-    # R = np.ones(wls.shape[0] , dtype='float')
-    R = np.zeros(wls.shape[0], dtype='float')
-    R[wls.shape[0] // 2:] = 1.
-    target_spec = []
-    for inc_ang in inc_angs:
-        target_spec.append(Spectrum(inc_ang, wls, R))
-
-    design = BaseDesign(target_spec, init_film)
+    specs = []
+    for inc in inc_angs:
+        specs.append(get_edge_filter_design(inc, wls))
+    design = BaseDesign(specs, init_film)
     return design
 
 
@@ -31,17 +28,45 @@ def make_reflection_design(
         init_film=whatever_film,
         wls=np.linspace(695, 939, 500)
 ) -> BaseDesign:
-    inc_ang = 0.
-    # wls = np.linspace(700, 800, 500) # when wls = 50, ~100 min
-    # default: DBR for SiO2 / TiO2
-    R = np.ones(wls.shape[0], dtype='float')
-    target_spec = [Spectrum(inc_ang, wls, R)]
 
-    design = BaseDesign(target_spec, init_film)
+    design = BaseDesign([get_reflector_spec(wls=wls)], init_film)
     return design
 
 
-def make_three_line_filter_design(init_film=whatever_film):
+def make_triband_filter_design(init_film=whatever_film):
+    design = BaseDesign([get_triband_filter_spec()], init_film)
+    return design
+
+
+def get_minus_filter_spec(wls):
+    '''Settings adpted from Jinlong Zhang et al. Thin-film thickness-modulated designs for optical minus filter, 2013
+    '''
+    assert np.min(wls) < 510 and np.max(wls) > 555, 'wls must cover stop band'
+    h = 0.8
+    R = (wls > 510.) & (555. > wls)
+    R = R.astype(float)
+    R *= h
+    T = 1 - R
+    return Spectrum(0., wls, R, (T + 1e-5))
+
+
+def get_reflector_spec(inc=0., wls=np.linspace(695, 939, 500)):
+    inc_ang = inc
+    # wls = np.linspace(700, 800, 500) # when wls = 50, ~100 min
+    # default: DBR for SiO2 / TiO2
+    R = np.ones(wls.shape[0], dtype='float')
+    return Spectrum(inc_ang, wls, R)
+
+
+def get_edge_filter_design(inc, wls):
+    # R = np.ones(wls.shape[0] , dtype='float')
+    R = np.zeros(wls.shape[0], dtype='float')
+    R[wls.shape[0] // 2:] = 1.
+
+    return Spectrum(inc, wls, R)
+
+
+def get_triband_filter_spec():
     inc_ang = 0.
 
     def make_r_spec(wl_1, wl_2):
@@ -80,7 +105,4 @@ def make_three_line_filter_design(init_film=whatever_film):
     wls = np.append(wls, make_wl(650, 700))
     R = np.append(R, make_r_spec(650, 700))
 
-    target_spec = [Spectrum(inc_ang, wls, R)]
-
-    design = BaseDesign(target_spec, init_film)
-    return design
+    return Spectrum(inc_ang, wls, R)

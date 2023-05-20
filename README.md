@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project simulates the optical response of thin films based on transfer matrix method and their corresponding auto-differentiation is implemented to (both temporally and spatially) efficiently evaluate the gradient. The calculation of the spectrum's gradient w.r.t $100$ layers' film is in the order of $10^{-2}$s which to our knowedge is comparable to SOTA performance. Moreover, inspired by NeuralODE we alliviated the memory barrier in constructing the computation graph, and thus the calculation of the gradient can be easily scaled up to films with thoudsands of layers.
+This project simulates the optical response of thin films based on transfer matrix method and their corresponding auto-differentiation is implemented both temporally and spatially efficiently to evaluate the gradient. The calculation of the spectrum's gradient w.r.t $100$ layers' film is in the order of $10^{-2}$s which to our knowedge is comparable to SOTA performance. Moreover, inspired by NeuralODE we alliviated the memory barrier in constructing the computation graph, and thus the calculation of the gradient can be easily scaled up to films with thoudsands of layers.
 
 Based on the above algorithms we implementated of the classical needle method and freeform design of film is also provided, allowing the design of inhomogeneous films. Additionally, a novel thin layer removal algorithm with lower impact on the performance is implemented.
 

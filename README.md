@@ -1,9 +1,9 @@
-# Needle Optimization Using TFNN
+# Thin Film Designer
 
 ## Overview
 
 TFNN is an efficient algorithm in computing transmission matrices when simulating optical response of multi-layer thin film structures.
-We implement TFNN in needle optimization, which is a classical algorithm in designing layers with little known information of the target.
+We implement TFNN in needle optimization, which is a classical algorithm in designing layers with little known information of the target. An implementation of the freeform design of film is also provided, allowing the design of inhomogeneous films.
 
 The aim of this project is
 

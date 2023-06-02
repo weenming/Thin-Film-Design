@@ -1,5 +1,4 @@
-name:
-    - Thin-Film-Design
+name: tf_design
 channels:
     - conda-forge
 dependencies:

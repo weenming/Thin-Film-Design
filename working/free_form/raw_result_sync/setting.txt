@@ -1,0 +1,7 @@
+free_form_params_ot1e-1to1e3_nsize1to1e4.5_log_int_50sep:
+    each_ots = np.array([i for i in 10 ** np.linspace(-1, 3, 50)])
+    n_sizes = np.array([int(i) for i in 10 ** np.linspace(0, 4, 50)])
+
+free_form_params_ot1e-1to1e3_nsize1to1e4.5_log_int_large_n_size:
+    each_ots = np.array([i for i in 10 ** np.linspace(-1, 3, 50)])
+    n_sizes = np.array([int(i) for i in 10 ** np.linspace(4, 5, 10)])

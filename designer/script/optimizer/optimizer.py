@@ -63,7 +63,6 @@ class Optimizer(ABC):
     
     
 
-
 class GradientOptimizer(Optimizer):
     def __init__(self, film, target_spec_ls, max_steps, **kwargs):
         super().__init__(film, target_spec_ls)
@@ -122,6 +121,32 @@ class GradientOptimizer(Optimizer):
         if self.shown_condition(self.i):
             print(
                 f'iter {self.i}, loss {self._validate_loss()}')
+            
+    def _mini_batching(self):
+        '''
+        Make mini-batches.
+        mat: #wls \cross #spec; pick out elem on the crossing of
+            rows=wl_idx and cols=spec_idx. For selected wl, R and T
+            are calculated simultaneously.
+
+        The size of J is fixed but the stored grads are different
+            in each epoch according to the random shuffle.
+        '''
+        self.spec_batch_idx = np.random.default_rng().choice(
+            len(self.target_spec_ls),
+            self.batch_size_spec,
+            replace=False
+        )
+        self.spec_batch_idx = np.sort(self.spec_batch_idx)
+
+        self.wl_batch_idx = np.random.default_rng().choice(
+            self.wl_num_min,
+            self.batch_size_wl,
+            replace=False
+        )
+        self.wl_batch_idx = np.sort(self.wl_batch_idx)
+
+
 
     @abstractmethod
     def _get_param(self):

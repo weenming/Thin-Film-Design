@@ -86,3 +86,4 @@ Note that the version of cudatoolkit should match that of the version of the dri
 
 ## To-do
 - parallelize inc ang
+- refactor design helper in archive/LM_gradient_descent.py

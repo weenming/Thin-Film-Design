@@ -130,32 +130,8 @@ class AdamOptimizer(GradientOptimizer):
         # return rms(self.f) THIS IS WRONG! should calculate on val set
         return calculate_RMS_f_spec(self.film, self.target_spec_ls)
 
-    def _mini_batching(self):
-        '''
-        Make mini-batches.
-        mat: #wls \cross #spec; pick out elem on the crossing of
-            rows=wl_idx and cols=spec_idx. For selected wl, R and T
-            are calculated simultaneously.
-
-        The size of J is fixed but the stored grads are different
-            in each epoch according to the random shuffle.
-        '''
-        self.spec_batch_idx = np.random.default_rng().choice(
-            len(self.target_spec_ls),
-            self.batch_size_spec,
-            replace=False
-        )
-        self.spec_batch_idx = np.sort(self.spec_batch_idx)
-
-        self.wl_batch_idx = np.random.default_rng().choice(
-            self.wl_num_min,
-            self.batch_size_wl,
-            replace=False
-        )
-        self.wl_batch_idx = np.sort(self.wl_batch_idx)
-
     def _optimize_step(self):
-        self._mini_batching()  # make sgd params
+        self._mini_batching()  # make mini batching params
         stack_f(
             self.f,
             self.n_arrs_ls,
@@ -245,7 +221,7 @@ class AdamFreeFormOptimizer(AdamOptimizer):
             **kwargs
     ):
         """
-        Initializes the AdamFreeFormOptimizer class, a subclass of AdamOptimizer.
+        Initializes the AdamFreeFormOptimizer class, inheriting from AdamOptimizer.
 
         Args:
             film (FreeFormFilm): The film object to be optimized.

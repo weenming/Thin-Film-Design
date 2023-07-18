@@ -3,9 +3,9 @@ sys.path.append('./designer/script/')
 sys.path.append('./')
 
 from design import DesignForSpecSimple
-from optimizer.arxiv.adam_d import adam_optimize
-from optimizer.arxiv.adam_non_sgd import adam_optimize_non_sgd
-from optimizer.LM_gradient_descent import LM_optimize_d_simple
+from optimizer.archive.adam_d import adam_optimize
+from optimizer.archive.adam_non_sgd import adam_optimize_non_sgd
+from optimizer.archive.LM_gradient_descent import LM_optimize_d_simple
 from optimizer.adam import AdamThicknessOptimizer
 from spectrum import Spectrum
 from film import TwoMaterialFilm

@@ -1,7 +1,7 @@
 import sys
 sys.path.append('./designer/script/')
 
-from optimizer.arxiv.grad_helper_non_sgd import stack_f, stack_J, stack_init_params
+from optimizer.archive.grad_helper_non_sgd import stack_f, stack_J, stack_init_params
 from utils.loss import calculate_RMS_f_spec
 from spectrum import BaseSpectrum
 from film import TwoMaterialFilm

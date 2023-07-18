@@ -6,7 +6,7 @@ import copy
 
 from film import TwoMaterialFilm
 from spectrum import BaseSpectrum
-from optimizer.LM_gradient_descent import stack_f, stack_J
+from optimizer.archive.LM_gradient_descent import stack_f, stack_J
 
 
 def genetic(film: TwoMaterialFilm):

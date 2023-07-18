@@ -127,7 +127,7 @@ class AdamOptimizer(GradientOptimizer):
         return self._rearrange_record()
 
     def _validate_loss(self):
-        # return rms(self.f) THIS IS WRONG! should calculate on val set
+        # return rms(self.f)
         return calculate_RMS_f_spec(self.film, self.target_spec_ls)
 
     def _optimize_step(self):

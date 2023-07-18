@@ -16,8 +16,34 @@ import copy
 from optimizer.optimizer import GradientOptimizer
 
 class SGDOptimizer(GradientOptimizer):
-    def __init__(self, ):
-        return
+
+    def __init__(
+        self,
+        film,
+        target_spec_ls: Sequence[BaseSpectrum],
+        max_steps,
+        **kwargs
+    ):
+        super().__init__(film, target_spec_ls, max_steps, **kwargs)
+        self.lr = 0.01 if 'lr' not in kwargs else kwargs['lr']
+        self.mu = 0 if 'mu' not in kwargs else kwargs['mu'] # momentum
+        self.tau = 0 if 'tau' not in kwargs else kwargs['tau'] # dampening
+        self.nesterov = False if 'nesterov' in kwargs else kwargs['nesterov']
+
+        # initialize optimizer
+        self.max_steps = max_steps
+        self.max_patience = self.max_steps if 'patience' not in kwargs else kwargs[
+            'patience']
+        self.current_patience = self.max_patience
+        self.best_loss = 0.
+        self.n_arrs_ls = stack_init_params(self.film, self.target_spec_ls)
+        self.b = 0.
+
+        self._get_param()  # init variable x
+
+        # allocate space for f and J
+        self.J = np.empty((self.total_wl_num, self.x.shape[0]))
+        self.f = np.empty(self.total_wl_num)
     
     def optimize(self):
         # in case not do_record, return [initial film], [initial loss]
@@ -37,7 +63,7 @@ class SGDOptimizer(GradientOptimizer):
         return self._rearrange_record()
 
     def _validate_loss(self):
-        # return rms(self.f) THIS IS WRONG! should calculate on val set
+        # return rms(self.f) 
         return calculate_RMS_f_spec(self.film, self.target_spec_ls)
 
     def _optimize_step(self):
@@ -63,9 +89,10 @@ class SGDOptimizer(GradientOptimizer):
         )
 
         self.g = self.J.T @ self.f
-        self.m = self.beta1 * self.m + (1 - self.beta1) * self.g
-        self.v = self.beta2 * self.v + (1 - self.beta2) * self.g ** 2
-        self.m_hat = self.m / (1 - self.beta1 ** (self.i + 1))
-        self.v_hat = self.v / (1 - self.beta2 ** (self.i + 1))
-        self.x -= self.alpha * self.m_hat / \
-            (np.sqrt(self.v_hat) + self.epsilon)
+        self.b = self.mu * self.b + (1 - self.tau) * self.g
+        if self.nesterov:
+            self.g = self.g + self.mu * self.b
+        else:
+            self.g = self.b
+
+        self.x -= self.lr * self.g

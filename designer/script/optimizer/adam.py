@@ -194,8 +194,8 @@ class AdamThicknessOptimizer(AdamOptimizer):
             film,
             target_spec_ls,
             max_steps,
-            alpha=alpha,
-            ** kwargs
+            alpha=alpha, 
+            **kwargs
         )
 
         self.get_f = get_spectrum_simple

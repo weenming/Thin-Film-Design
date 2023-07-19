@@ -96,3 +96,26 @@ class SGDOptimizer(GradientOptimizer):
             self.g = self.b
 
         self.x -= self.lr * self.g
+
+
+class SGDThicknessOptimizer(SGDOptimizer):
+    def __init__(
+            self,
+            film,
+            target_spec_ls: Sequence[BaseSpectrum],
+            max_steps,
+            lr=1,
+            **kwargs
+    ):
+        
+        super().__init__(film, target_spec_ls, max_steps, lr=lr, **kwargs)
+        self.get_f = get_spectrum_simple
+        self.get_J = get_jacobi_simple
+
+    def _set_param(self):
+        # Project back to feasible domain
+        self.x[self.x < 0] = 0.
+        self.film.update_d(self.x)
+
+    def _get_param(self):
+        self.x = self.film.get_d()

@@ -12,6 +12,7 @@ import tmm.tmm_cpu.get_jacobi as get_jacobi_cpu
 import timeit
 from optimizer.grad_helper import stack_J, stack_init_params
 import matplotlib.pyplot as plt
+import pickle
 
 
 def jacobi_GPU(layer_number):
@@ -100,7 +101,19 @@ def plot_time():
     ax.set_ylabel("time / s")
     # ax.set_yscale('log')
     ax.set_xlim(0, Ns[-1])
-    plt.show()
+    # plt.show()
+
+    pickle.dump(
+        {'jacobi': {
+            'cpu': {
+                'layer_number': Ns,
+                'time': Ts_CPU
+            }, 
+            'gpu': {
+                'layer_number': Ns,
+                'time': Ts_GPU
+            }
+        }}, './working/review/')
 
 
 def plot_time_GPU():

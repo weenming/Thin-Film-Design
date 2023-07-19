@@ -69,7 +69,7 @@ def get_insert_jacobi_simple(
     # allocate space for Jacobi matrix
     jacobi_device = cuda.device_array(
         (wls_size * 2, layer_number),
-        strides = (8 * total_layer_number, 8), 
+        strides = (8 * layer_number, 8), 
         dtype="float64"
     )
 

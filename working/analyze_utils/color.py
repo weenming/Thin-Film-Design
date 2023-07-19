@@ -8,7 +8,11 @@ def add_num_sign(f):
 
 @add_num_sign
 def qualitative():
-    return ['ff1f5b', '00cd6c', 'af58ba', '009ade', 'ffc61a', 'f28522', 'a0b1ba', 'a6761d']
+    return ['ff1f5b', '009ade', '00cd6c', 'af58ba', 'ffc61a', 'f28522', 'a0b1ba', 'a6761d']
+
+@add_num_sign
+def cold_qualitative():
+    return ['7b7b7c', '28a8de', 'fff300', 'f3835e', 'ef5a29', 'f1eee8']
 
 @add_num_sign
 def blue_sequential():

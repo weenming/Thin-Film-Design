@@ -6,11 +6,11 @@ This project simulates the optical response of thin films based on transfer matr
 
 Based on the above algorithms we implementated of the classical needle method. A new freeform design scheme is also provided, which allows the design of inhomogeneous films. Additionally, a novel thin layer removal algorithm with lower impact on the performance is implemented.
 
-The aim of this project is
+The aim of this project is to
 
 - increase the efficiency of traditional algorithms
 - search for the underlining rules determining the design results.
-- find ways to realize better designs of multi-layer films.
+- find ways to better designs multi-layer films.
   - lower total optical thickness
   - lower layer numbers
   - fewer "too thin" layers which is impractical in realistic manufacture.

@@ -61,26 +61,26 @@ def insert_1_layer(
 
 def get_insert_grad(film: TwoMaterialFilm, target_spec_ls):
     # prepare initial params
-    target_spec, n_arrs_ls = stack_init_params(film, target_spec_ls)
+    assert len(target_spec_ls) == 1, 'needle only supports single target spectrum for now.'
+    target_spec, n_arrs_ls = target_spec_ls[0].get_R(), stack_init_params(film, target_spec_ls)
     # allocate space and calculate J and f
     d = film.get_d()
-    J = np.empty((target_spec.shape[0], d.shape[0]))
-    f = np.empty(target_spec.shape[0])  # only R spec: no absorption
-    # TODO: refractor
+    total_wl_num = sum([s.get_R().shape[0] for s in target_spec_ls])
+    J = np.empty((total_wl_num * 2, d.shape[0]))
+    f = np.empty(total_wl_num * 2)  # only R spec: no absorption
+    # TODO: refractor, refer to grad_helper.py
     stack_f(
         f,
         n_arrs_ls,
         d,
         target_spec_ls,
-        target_spec
     )
     stack_J(
         J,
         n_arrs_ls,
         d,
         target_spec_ls,
-        get_J=get_insert_jacobi_simple,
-        MAX_LAYER_NUMBER=MAX_LAYER
+        get_J=get_insert_jacobi_simple, # this function only returns wl * 1 (no T spec)
     )
 
     # find insertion place with largest negative gradient

@@ -104,7 +104,8 @@ class GradientOptimizer(Optimizer):
         '''
         Append info of current step.
 
-        Returned res list as: [films], [losses]
+        Returned res list as: [films], [losses] since transformed
+        with _rearrange_record once more before returning
         '''
         if len(self.records) != 0:
             self.records.append([

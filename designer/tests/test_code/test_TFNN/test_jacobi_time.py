@@ -2,6 +2,8 @@ import unittest
 import numpy as np
 import sys
 sys.path.append("./designer/script")
+sys.path.append("./designer/")
+sys.path.append("./")
 import os
 import time
 import film as film
@@ -29,7 +31,7 @@ def jacobi_GPU(layer_number):
 
     jacobi = np.empty((wls.shape[0] * 2, layer_number))
     get_jacobi.get_jacobi_simple(jacobi, wls, f.get_d(),
-                                 f.spectrums[0].n, f.spectrums[0].n_sub, f.spectrums[0].n_inc, inc_ang, jacobi.shape[1])
+                                 f.spectrums[0].film.calculate_n_array(wls), f.spectrums[0].n_sub, f.spectrums[0].n_inc, inc_ang, jacobi.shape[1])
 
 
 def jacobi_CPU(layer_number):
@@ -103,17 +105,18 @@ def plot_time():
     ax.set_xlim(0, Ns[-1])
     # plt.show()
 
-    pickle.dump(
-        {'jacobi': {
-            'cpu': {
-                'layer_number': Ns,
-                'time': Ts_CPU
-            }, 
-            'gpu': {
-                'layer_number': Ns,
-                'time': Ts_GPU
-            }
-        }}, './working/review/')
+    with open(os.path.dirname(__file__) + '/./../../../../working/review/computation/result', 'wb') as f:
+        pickle.dump(
+            {'jacobi': {
+                'cpu': {
+                    'layer_number': Ns,
+                    'time': Ts_CPU
+                }, 
+                'gpu': {
+                    'layer_number': Ns,
+                    'time': Ts_GPU
+                }
+            }}, f)
 
 
 def plot_time_GPU():
@@ -226,4 +229,4 @@ def test_helper():
 
 
 if __name__ == "__main__":
-    test_helper()
+    plot_time()

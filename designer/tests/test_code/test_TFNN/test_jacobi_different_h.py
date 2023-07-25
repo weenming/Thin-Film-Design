@@ -1,3 +1,5 @@
+import os
+import pickle
 import unittest
 import numpy as np
 import sys
@@ -117,7 +119,7 @@ def make_expected_file():
 def plot_diff_h():
     jacobi_standard = np.empty((wls.shape[0] * 2, cells * 2), dtype='float')
     get_jacobi_free_form(jacobi_standard, wls, f1.get_d(),
-                         f1.spectrums[0].n, f1.spectrums[0].n_sub, f1.spectrums[0].n_inc, inc_ang)
+                         f1.calculate_n_array(wls), f1.spectrums[0].n_sub, f1.spectrums[0].n_inc, inc_ang)
 
     spec_standard = np.empty(wls.shape[0] * 2, dtype='double')
 
@@ -162,13 +164,19 @@ def plot_diff_h():
             jacobi[:, i] /= h
         errors.append(np.sqrt(np.sum(np.square(jacobi / 2 - jacobi_standard))))
 
-    fig, ax = plt.subplots(1, 1)
-    ax.plot(hs, errors, marker='.')
-    ax.set_ylabel('RMS of brute force and analytical derivative')
-    ax.set_xlabel('h')
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-    plt.show()
+    with open(os.path.dirname(__file__) + '/../../../../working/review/computation/result_dif_h', 'wb') as f:
+        pickle.dump({
+            'hs': hs, 
+            'errors': errors
+        }, f)
+
+    # fig, ax = plt.subplots(1, 1)
+    # ax.plot(hs, errors, marker='.')
+    # ax.set_ylabel('RMS of brute force and analytical derivative')
+    # ax.set_xlabel('h')
+    # ax.set_xscale('log')
+    # ax.set_yscale('log')
+    # plt.show()
 
 
 if __name__ == "__main__":

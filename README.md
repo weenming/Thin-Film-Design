@@ -41,7 +41,7 @@ To get started with the Thin-Film-Design library, follow these steps:
 
 Run on a machine with NVIDIA GPU(s) that supports CUDA.
 
-Use `conda env create --file=environments.yml` to install dependencies. 
+Use `conda env create --file=environment.yml` to install dependencies. 
 
 Note that the version of cudatoolkit should match that of the version of the driver, which can be found by the tool `nvidia-smi`
 

@@ -6,20 +6,33 @@ import scipy
 
 import importlib.resources as pkg_resources  # python > 3.7
 from designer import material_data
-
+import designer.material_data.exp_eq as exp_eq
 
 # use these wrapper functions to select which model / exp data to use
 def get_n_SiO2(wl):
-    return get_n_SiO2_Cauchy(wl)
+    return exp_eq.get_n_SiO2_Sellmeier(wl)
 
 
 def get_n_TiO2(wl):
-    return get_n_TiO2_Cauchy(wl)
+    return exp_eq.get_n_TiO2_Sellmeier(wl)
 
 
 def get_n_Si(wl):
     return get_Si_exp(wl)
 
+
+def get_n_Air(wl):
+    # approximate
+    return 1.
+
+def get_n_Ta2O5_xc(wl):
+    return exp_eq.get_n_Ta2O5_Cauchy(wl)
+
+def get_n_SiO2_xc(wl):
+    return exp_eq.get_n_SiO2_Cauchy(wl)
+
+def get_n_MgF2_xc(wl):
+    return exp_eq.get_n_MgF2_Cauchy(wl)
 
 def get_n_1(wl):
     return wl / wl  # broadcast if is instance of np.array
@@ -27,7 +40,6 @@ def get_n_1(wl):
 
 def get_n_1_5(wl):
     return 1.5 * wl / wl
-
 
 
 def get_n_2(wl):
@@ -38,24 +50,6 @@ def get_n_free(wl, n: complex):
     return wl / wl * n
 
 
-def get_n_SiO2_Cauchy(wl):
-    wl = wl * 1e-3  # nm to \mu m
-    # SiO2: Ghosh 1999 crystal, alpha-quartz
-    # NOTE: applicable to 198 nm - 2050 nm
-    return np.sqrt(1.28604141 + 1.07044083 * wl**2 /
-                   (wl**2 - 0.0100585997) + 1.10202242 * wl**2 / (wl**2 - 100.))
-
-
-def get_n_TiO2_Cauchy(wl):
-    wl = wl * 1e-3
-    # TiO2: Devore 1951, crystal
-    # NOTE: applicable to 430 nm - 1530 nm
-    return np.sqrt(5.913 + 0.2441 / (wl**2 - 0.0803))
-
-
-def get_n_Air(wl):
-    # approximate
-    return 1.
 
 
 def load_from_file(fname_n, fname_k) -> tuple[NDArray, NDArray]:

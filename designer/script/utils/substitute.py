@@ -3,7 +3,7 @@ sys.path.append('./designer/script')
 import numpy as np
 import copy
 
-from film import TwoMaterialFilm
+from film import TwoMaterialFilm, MultiMaterialFilm
 from spectrum import SpectrumSimple
 import tmm.get_intermediate_transfer_matrix as get_W
 from tmm.get_E import get_E
@@ -12,6 +12,7 @@ from utils.loss import calculate_RMS
 
 def equal_optical_thickness(f: TwoMaterialFilm, d_min):
     d = f.get_d()
+    # neglect first layer...
     i = 1
     count = 0
     while i < d.shape[0] - 1:
@@ -20,10 +21,55 @@ def equal_optical_thickness(f: TwoMaterialFilm, d_min):
             optical_ratio = n_arr[0, i + 1] / n_arr[0, i]
             d[i - 1] += optical_ratio * d[i] + d[i + 1]
             d = np.delete(d, [i, i + 1])
-            i -= 1
             count += 1
+            if type(f) is MultiMaterialFilm:
+                f.remove_layer([i, i + 1])
+                f.update_d(d)
+            else:
+                f.update_d(d)
+        else:
+            i += 1
+
+    return count
+
+def equal_optical_thickness_new(f: TwoMaterialFilm, d_min, wl=700):
+    d = f.get_d()
+    # neglect first layer...
+    del_idx = []
+    count = 0
+    for i in range(1, d.shape[0] - 1):
+        if d[i] >= d_min:
+            continue
+        
+        n_arr = f.calculate_n_array(np.array([wl]))
+        optical_ratio = n_arr[0, i] / n_arr[0, i + 1]
+        count += 1
+        db = optical_ratio * d[i]
+        
+        # update d
+        # determine which index to merge the thin layer into
+        i_to_add = i - 1  # .....
+        for i_to_del in del_idx[::-1]:
+            if i_to_del != i_to_add:
+                break
+            else:
+                i_to_add -= 2
+                assert i_to_add >= 0, 'bad merge-to index'
+
+        if i == d.shape[0] - 1:
+            d[i_to_add] += db
+        else:
+            d[i_to_add] += d[i + 1] + db.real
+        del_idx += [i, i + 1]
+
         i += 1
-    f.update_d(d)
+        
+    if type(f) is MultiMaterialFilm:
+        f.remove_layer(del_idx)
+        f.update_d(np.delete(d, del_idx))
+    else:
+        f.update_d(d)
+
     return count
 
 
@@ -94,15 +140,18 @@ def optimal_and_thin_film_approx_substitution_onestep_new(f: TwoMaterialFilm, d_
             if i == d.shape[0] - 1:
                 d[i_to_add] += dB
             else:
-                d[i_to_add] += d[i + 1] + dB
+                d[i_to_add] += d[i + 1] + dB.real
             delete_indices += [i, i + 1]
             i += 1
 
         i += 1
         # end loop
-
-    d = np.delete(d, delete_indices).real
-    f.update_d(d)
+    if type(f) is MultiMaterialFilm:
+        f.remove_layer(delete_indices)
+        f.update_d(np.delete(d, delete_indices).real)
+    else:
+        d = np.delete(d, delete_indices).real
+        f.update_d(d)
     return count, ratios
 
 

@@ -11,5 +11,5 @@ dependencies:
     # You may need to change the following line according the
     # version of the CUDA driver!
     # CUDA driver version can be found using nvidia-smi.
-    - cudatoolkit=11.2
+    - cudatoolkit=11.7
     - dill

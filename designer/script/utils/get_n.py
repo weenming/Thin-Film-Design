@@ -20,6 +20,8 @@ def get_n_TiO2(wl):
 def get_n_Si(wl):
     return get_Si_exp(wl)
 
+def get_n_BK7(wl):
+    return exp_eq.get_n_BK7_Sellmeier(wl)
 
 def get_n_Air(wl):
     # approximate

@@ -79,15 +79,8 @@ def _launch_propagation(W_spec, wls, d, n_layers, n_sub, n_inc, inc_ang,
     # copy wls, d, n_layers, n_sub, n_inc, inc_ang to GPU
     wls_device = cuda.to_device(wls)
     d_device = cuda.to_device(d)
-    # copy 2d arr into 1d as contiguous arr to save data transfer
-    n_A = n_layers[:, 0].copy(order="C")
-    n_A_device = cuda.to_device(n_A)
-    # may have only 1 layer.
-    if layer_number == 1:
-        n_B_device = cuda.to_device(np.empty(wls_size))
-    else:
-        n_B = n_layers[:, 1].copy(order="C")
-        n_B_device = cuda.to_device(n_B)
+    # # copy 2d arr into 1d as contiguous arr to save data transfer
+    n_device = cuda.to_device(n_layers)
     n_sub_device = cuda.to_device(n_sub)
     n_inc_device = cuda.to_device(n_inc)
     # primitive transfer is not costly so I leave out inc_ang, wls_size and
@@ -104,8 +97,7 @@ def _launch_propagation(W_spec, wls, d, n_layers, n_sub, n_inc, inc_ang,
         Ws_device,
         wls_device,
         d_device,
-        n_A_device,
-        n_B_device,
+        n_device,
         n_sub_device,
         n_inc_device,
         inc_ang_rad,
@@ -122,7 +114,7 @@ def _launch_propagation(W_spec, wls, d, n_layers, n_sub, n_inc, inc_ang,
 
 
 @cuda.jit
-def forward_propagation_simple_W_i(W_spec, wls, d, n_A_arr, n_B_arr,
+def forward_propagation_simple_W_i(W_spec, wls, d, n_arr, 
                                    n_sub_arr, n_inc_arr, inc_ang, wls_size, layer_number,
                                    i_start, i_end):
     """
@@ -157,24 +149,12 @@ def forward_propagation_simple_W_i(W_spec, wls, d, n_A_arr, n_B_arr,
     wl = wls[thread_id]
 
     # inc_ang is already in rad
-    n_A = n_A_arr[thread_id]
-    n_B = n_B_arr[thread_id]
+    n_arr = n_arr[thread_id, :]
     n_sub = n_sub_arr[thread_id]
     n_inc = n_inc_arr[thread_id]
     # incident angle in each layer. Snell's law: n_a sin(phi_a) = n_b sin(phi_b)
-    cos_A = cmath.sqrt(1 - ((n_inc / n_A) * cmath.sin(inc_ang)) ** 2)
-    cos_B = cmath.sqrt(1 - ((n_inc / n_B) * cmath.sin(inc_ang)) ** 2)
     cos_inc = cmath.cos(inc_ang)
     cos_sub = cmath.sqrt(1 - ((n_inc / n_sub) * cmath.sin(inc_ang)) ** 2)
-
-    # choose cos from arr of size 2. Use local array which is private to thread
-    cos_arr = cuda.local.array(2, dtype="complex128")
-    cos_arr[0] = cos_A
-    cos_arr[1] = cos_B
-
-    n_arr = cuda.local.array(2, dtype="complex128")
-    n_arr[0] = n_A
-    n_arr[1] = n_B
 
     # Allocate space for M
     Ms = cuda.local.array((2, 2), dtype="complex128")
@@ -197,8 +177,9 @@ def forward_propagation_simple_W_i(W_spec, wls, d, n_A_arr, n_B_arr,
         Wp[1, 0] = 0.5
         Wp[1, 1] = -0.5 / cos_inc
     else:  # fill W_0 with M_i
-        cosi = cos_arr[i_start % 2]
-        ni = n_arr[i_start % 2]
+        
+        ni = n_arr[i_start]
+        cosi = cmath.sqrt(1 - ((n_inc / ni) * cmath.sin(inc_ang)) ** 2)
         phi = 2 * cmath.pi * 1j * cosi * ni * d[i_start] / wl
 
         coshi = cmath.cosh(phi)
@@ -219,8 +200,10 @@ def forward_propagation_simple_W_i(W_spec, wls, d, n_A_arr, n_B_arr,
 
     # forward propagation
     for i in range(i_start, min(i_end + 1, layer_number)):
-        cosi = cos_arr[i % 2]
-        ni = n_arr[i % 2]
+        
+        ni = n_arr[i]
+        cosi = cmath.sqrt(1 - ((n_inc / ni) * cmath.sin(inc_ang)) ** 2)
+
         phi = 2 * cmath.pi * 1j * cosi * ni * d[i] / wl
 
         coshi = cmath.cosh(phi)
@@ -240,7 +223,7 @@ def forward_propagation_simple_W_i(W_spec, wls, d, n_A_arr, n_B_arr,
         mul_right(Wp, Mp)
 
     # construct the last term D_{n+1}
-    # technically this is merely D which is not M (D^{-2}PD)
+    # technically this is merely D, not M (D^{-1}PD)
 
     if i_end > layer_number - 1:  # i_end == d.shape[0]: include substrate
         Ms[0, 0] = 1.

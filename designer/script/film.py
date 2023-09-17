@@ -508,8 +508,7 @@ class MultiMaterialFilm(BaseFilm):
         self.register_multiple_get_n()
 
     def remove_negative_thickness_layer(self, exclude=[]):
-        d = self.get_d()
-        rm_idx = np.where(self.d < 0)
+        rm_idx = np.where(self.get_d() < 0)
         rm_idx = [i for i in rm_idx if i not in exclude]
         self.remove_layer(rm_idx)
 
@@ -532,8 +531,7 @@ class MultiMaterialFilm(BaseFilm):
         n_arr = np.empty(
             (wls.shape[0], self.get_layer_number()), dtype='complex128')
         for i, get_n in enumerate(self.get_n_ls):
-            n: NDArray = get_n(wls)
-            n_arr[:, i] = n
+            n_arr[:, i] = get_n(wls)
 
         return n_arr
 

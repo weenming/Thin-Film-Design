@@ -37,8 +37,10 @@ def equal_optical_thickness_new(f: TwoMaterialFilm, d_min, wl=700):
     # neglect first layer...
     del_idx = []
     count = 0
-    for i in range(1, d.shape[0] - 1):
+    i = 1
+    while i < d.shape[0] - 1:
         if d[i] >= d_min:
+            i += 1
             continue
         
         n_arr = f.calculate_n_array(np.array([wl]))
@@ -53,7 +55,7 @@ def equal_optical_thickness_new(f: TwoMaterialFilm, d_min, wl=700):
             if i_to_del != i_to_add:
                 break
             else:
-                i_to_add -= 2
+                i_to_add -= 1
                 assert i_to_add >= 0, 'bad merge-to index'
 
         if i == d.shape[0] - 1:
@@ -61,14 +63,14 @@ def equal_optical_thickness_new(f: TwoMaterialFilm, d_min, wl=700):
         else:
             d[i_to_add] += d[i + 1] + db.real
         del_idx += [i, i + 1]
-
-        i += 1
+        i += 2
+        
         
     if type(f) is MultiMaterialFilm:
         f.remove_layer(del_idx)
         f.update_d(np.delete(d, del_idx))
     else:
-        f.update_d(d)
+        f.update_d(np.delete(d, del_idx))
 
     return count
 
@@ -157,9 +159,10 @@ def optimal_and_thin_film_approx_substitution_onestep_new(f: TwoMaterialFilm, d_
 
 def calculate_dB(spec: SpectrumSimple, d, layer_index):
     i = layer_index
-    n = spec.film.calculate_n_array(spec.WLS)
+    wls = spec.WLS
+    n = spec.film.calculate_n_array(wls)
     W1 = get_W.get_W_before_ith_layer(
-        spec.WLS,
+        wls,
         d,
         n,
         spec.n_sub,
@@ -169,7 +172,7 @@ def calculate_dB(spec: SpectrumSimple, d, layer_index):
     )
 
     W2 = get_W.get_W_after_ith_layer(
-        spec.WLS,
+        wls,
         d,
         n,
         spec.n_sub,
@@ -178,16 +181,18 @@ def calculate_dB(spec: SpectrumSimple, d, layer_index):
         i
     )
 
-    nB = np.tile(n[:, i + 1], (2,))
-    nA = np.tile(n[:, i], (2,))
-    n_inc = np.tile(spec.n_inc, (2,))
+    W1_s, W1_p = W1[:wls.shape[0], :, :], W1[wls.shape[0]:, :, :]
+    W2_s, W2_p = W2[:wls.shape[0], :, :], W2[wls.shape[0]:, :, :]
+
+    nB = n[:, i + 1]
+    nA = n[:, i]
+    n_inc = spec.n_inc
     cosA = np.sqrt(1 - ((n_inc / nA) * np.sin(spec.INC_ANG)) ** 2)
     cosB = np.sqrt(1 - ((n_inc / nB) * np.sin(spec.INC_ANG)) ** 2)
-    wls = np.tile(spec.WLS, (2,))
     dA = d[i]
 
-    Q_A_p, Q_B_p, Q_A_s, Q_B_s = np.zeros((2 * spec.WLS.shape[0], 2, 2)), np.zeros(
-        (2 * spec.WLS.shape[0], 2, 2)), np.zeros((2 * spec.WLS.shape[0], 2, 2)), np.zeros((2 * spec.WLS.shape[0], 2, 2))
+    Q_A_p, Q_B_p, Q_A_s, Q_B_s = np.zeros((spec.WLS.shape[0], 2, 2)), np.zeros(
+        (spec.WLS.shape[0], 2, 2)), np.zeros((spec.WLS.shape[0], 2, 2)), np.zeros((spec.WLS.shape[0], 2, 2))
     def fill(arr, a10, a01):
         arr[:, 1, 0] = a10
         arr[:, 0, 1] = a01
@@ -196,23 +201,21 @@ def calculate_dB(spec: SpectrumSimple, d, layer_index):
     fill(Q_A_s, cosA ** 2 * nA ** 2, 1 / cosA ** 2 / nA ** 2)
     fill(Q_B_s, cosB ** 2 * nB ** 2, 1 / cosB ** 2 / nB ** 2)
     
-    E0E0T = np.array([[[0, 0], [1, 0]] for _ in range(2 * spec.WLS.shape[0])])
+    E0 = np.tile(np.array([[0], [1]]), (wls.shape[0], 1, 1))
     # solve A_lambda1 and A_lambda2 respectively and acquire the ratio between d_B and d_A
     # TODO: should have used hermite conjugate. Don't forget to check consistency in the real part!
-    partialL_A_p = np.transpose(W1, (0, 2, 1)).conj(
-    ) @ W1 @ Q_A_p @ W2 @ E0E0T @ np.transpose(W2, (0, 2, 1)).conj()
-    partialL_B_p = np.transpose(W1, (0, 2, 1)).conj(
-    ) @ W1 @ Q_B_p @ W2 @ E0E0T @ np.transpose(W2, (0, 2, 1)).conj()
+    # ...what was i talking about?
+    partialL_A_p = W1_p @ Q_A_p @ W2_p @ E0
+    partialL_B_p = W1_p @ Q_B_p @ W2_p @ E0
 
-    partialL_A_s = np.transpose(W1, (0, 2, 1)).conj(
-    ) @ W1 @ Q_A_s @ W2 @ E0E0T @ np.transpose(W2, (0, 2, 1)).conj()
-    partialL_B_s = np.transpose(W1, (0, 2, 1)).conj(
-    ) @ W1 @ Q_B_s @ W2 @ E0E0T @ np.transpose(W2, (0, 2, 1)).conj()
+    partialL_A_s = W1_s @ Q_A_s @ W2_s @ E0
+    partialL_B_s = W1_s @ Q_B_s @ W2_s @ E0
 
-    upper = (Q_B_p.conj() * partialL_A_p).sum().real + \
-        (Q_B_s.conj() * partialL_A_s).sum().real
-    lower = (Q_B_p.conj() * partialL_B_p).sum().real + \
-        (Q_B_s.conj() * partialL_B_s).sum().real
+    ax = [0, 2, 1] # transpose axes
+    upper = (partialL_B_p.conj().transpose(*ax) * partialL_A_p).sum().real + \
+        (partialL_B_s.conj().transpose(*ax) * partialL_A_s).sum().real
+    lower = (partialL_B_p.conj().transpose(*ax) * partialL_B_p).sum().real + \
+        (partialL_B_s.conj().transpose(*ax) * partialL_B_s).sum().real
 
     dB = dA * upper / lower
 

@@ -8,3 +8,13 @@ Traceback (most recent call last):
   File "/root/Thin-Film-Design/working/gd_descent_training/run_gd_design.py", line 38, in <module>
     with open(fname, 'wb') as f:
 FileNotFoundError: [Errno 2] No such file or directory: './design_anti_reflector/SiO2_Ta2O5-400to700nm-700nm/ot1_layer40_rep0_design.pkl'
+/home/vipuser/miniconda3/envs/tf_design_2/lib/python3.10/site-packages/numba/cuda/dispatcher.py:488: NumbaPerformanceWarning: Grid size 20 will likely result in GPU under-utilization due to low occupancy.
+  warn(NumbaPerformanceWarning(msg))
+/home/vipuser/miniconda3/envs/tf_design_2/lib/python3.10/site-packages/numba/cuda/dispatcher.py:488: NumbaPerformanceWarning: Grid size 20 will likely result in GPU under-utilization due to low occupancy.
+  warn(NumbaPerformanceWarning(msg))
+/home/vipuser/miniconda3/envs/tf_design_2/lib/python3.10/site-packages/numba/cuda/dispatcher.py:488: NumbaPerformanceWarning: Grid size 20 will likely result in GPU under-utilization due to low occupancy.
+  warn(NumbaPerformanceWarning(msg))
+Traceback (most recent call last):
+  File "/root/Thin-Film-Design/working/gd_descent_training/run_gd_design.py", line 38, in <module>
+    with open(fname, 'wb') as f:
+FileNotFoundError: [Errno 2] No such file or directory: './design_anti_reflector/SiO2_Ta2O5-400to700nm-700nm_ot1_layer40_rep0_design.pkl'

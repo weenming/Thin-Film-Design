@@ -191,15 +191,16 @@ def calculate_dB(spec: SpectrumSimple, d, layer_index):
     cosB = np.sqrt(1 - ((n_inc / nB) * np.sin(spec.INC_ANG)) ** 2)
     dA = d[i]
 
-    Q_A_p, Q_B_p, Q_A_s, Q_B_s = np.zeros((spec.WLS.shape[0], 2, 2)), np.zeros(
-        (spec.WLS.shape[0], 2, 2)), np.zeros((spec.WLS.shape[0], 2, 2)), np.zeros((spec.WLS.shape[0], 2, 2))
+    Q_A_p = np.zeros((spec.WLS.shape[0], 2, 2), dtype='complex128')
+    Q_B_p, Q_A_s, Q_B_s = copy.deepcopy(Q_A_p), copy.deepcopy(Q_A_p), copy.deepcopy(Q_A_p)
+    
     def fill(arr, a10, a01):
         arr[:, 1, 0] = a10
         arr[:, 0, 1] = a01
-    fill(Q_A_p, cosA ** 2, nA ** 2)
-    fill(Q_B_p, cosB ** 2, nB ** 2)
-    fill(Q_A_s, cosA ** 2 * nA ** 2, 1 / cosA ** 2 / nA ** 2)
-    fill(Q_B_s, cosB ** 2 * nB ** 2, 1 / cosB ** 2 / nB ** 2)
+    fill(Q_A_p, cosA ** 2 / wls, nA ** 2 / wls)
+    fill(Q_B_p, cosB ** 2 / wls, nB ** 2 / wls)
+    fill(Q_A_s, cosA ** 2 * nA ** 2 / wls, 1 / cosA ** 2 / nA ** 2 / wls)
+    fill(Q_B_s, cosB ** 2 * nB ** 2 / wls, 1 / cosB ** 2 / nB ** 2 / wls)
     
     E0 = np.tile(np.array([[0], [1]]), (wls.shape[0], 1, 1))
     # solve A_lambda1 and A_lambda2 respectively and acquire the ratio between d_B and d_A
@@ -211,13 +212,18 @@ def calculate_dB(spec: SpectrumSimple, d, layer_index):
     partialL_A_s = W1_s @ Q_A_s @ W2_s @ E0
     partialL_B_s = W1_s @ Q_B_s @ W2_s @ E0
 
-    ax = [0, 2, 1] # transpose axes
-    upper = (partialL_B_p.conj().transpose(*ax) * partialL_A_p).sum().real + \
-        (partialL_B_s.conj().transpose(*ax) * partialL_A_s).sum().real
-    lower = (partialL_B_p.conj().transpose(*ax) * partialL_B_p).sum().real + \
-        (partialL_B_s.conj().transpose(*ax) * partialL_B_s).sum().real
+    ax = [0, 1, 2] # transpose axes
+    # BUG: \partial L / \partial \tau should be real! if it weren't then there
+    # must be something wrong
+    realsum = lambda arr: np.sum(np.sqrt(arr.real ** 2))
+    upper = realsum(partialL_A_p.conj().transpose(*ax) * partialL_B_p + \
+        partialL_A_s.conj().transpose(*ax) * partialL_B_s)
+    lower = realsum(partialL_B_p.conj().transpose(*ax) * partialL_B_p + \
+        partialL_B_s.conj().transpose(*ax) * partialL_B_s)
 
-    dB = dA * upper / lower
+    dB = dA * (upper / lower).real
+
+    # print(f'imag part: {(upper / lower).imag}, real part: {(upper / lower).real}')
 
     # save substitution info
     this_ot_ratio = (nB[wls.shape[0] // 2] * dB) / (nA[wls.shape[0] // 2] * dA)

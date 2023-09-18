@@ -34,6 +34,6 @@ for init_ot in init_ots:
             design = BaseDesign([target], init_film)
             adam = AdamThicknessOptimizer(design.film, design.target_specs, 20000, alpha=1, show=False, record=True)
             films, losses = adam.optimize()
-            fname = f'./design_anti_reflector/SiO2_Ta2O5-400to700nm-700nm/ot{init_ot}_layer{layer_number}_rep{rep}_design.pkl'
+            fname = f'./design_anti_reflector/SiO2_Ta2O5-400to700nm-700nm_ot{init_ot}_layer{layer_number}_rep{rep}_design.pkl'
             with open(fname, 'wb') as f:
                 pickle.dump(design, f)

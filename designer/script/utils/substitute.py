@@ -202,7 +202,7 @@ def calculate_dB(spec: SpectrumSimple, d, layer_index):
     fill(Q_A_s, cosA ** 2 * nA ** 2 / wls, 1 / cosA ** 2 / nA ** 2 / wls)
     fill(Q_B_s, cosB ** 2 * nB ** 2 / wls, 1 / cosB ** 2 / nB ** 2 / wls)
     
-    E0 = np.tile(np.array([[0], [1]]), (wls.shape[0], 1, 1))
+    E0 = np.tile(np.array([[1], [0]]), (wls.shape[0], 1, 1))
     # solve A_lambda1 and A_lambda2 respectively and acquire the ratio between d_B and d_A
     # TODO: should have used hermite conjugate. Don't forget to check consistency in the real part!
     # ...what was i talking about?
@@ -214,14 +214,14 @@ def calculate_dB(spec: SpectrumSimple, d, layer_index):
 
     ax = [0, 1, 2] # transpose axes
     # BUG: \partial L / \partial \tau should be real! if it weren't then there
-    # must be something wrong
-    realsum = lambda arr: np.sum(np.sqrt(arr.real ** 2))
+    # must be something wrong. We take real part first as per the derivation in TFNN
+    realsum = lambda arr: np.sum(arr.real)
     upper = realsum(partialL_A_p.conj().transpose(*ax) * partialL_B_p + \
         partialL_A_s.conj().transpose(*ax) * partialL_B_s)
     lower = realsum(partialL_B_p.conj().transpose(*ax) * partialL_B_p + \
         partialL_B_s.conj().transpose(*ax) * partialL_B_s)
 
-    dB = dA * (upper / lower).real
+    dB = dA * (upper / lower)
 
     # print(f'imag part: {(upper / lower).imag}, real part: {(upper / lower).real}')
 

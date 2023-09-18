@@ -132,8 +132,8 @@ def get_SiO2_exp(wl):
     global cached_SiO2, wls_SiO2, n_SiO2
     if not cached_SiO2:
         wls_SiO2, n_SiO2 = load_from_file(
-            'SiO2_n_Rodriguez-de_Marcos.csv',
-            'SiO2_k_Rodriguez-de_Marcos.csv',
+            'SiO2_n_xc.csv',
+            'SiO2_k_xc.csv',
         )
         n_SiO2 = n_SiO2.real
         n_SiO2_interp = scipy.interpolate.interp1d(wls_SiO2, n_SiO2)

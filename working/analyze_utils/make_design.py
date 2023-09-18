@@ -57,6 +57,9 @@ def get_reflector_spec(inc=0., wls=np.linspace(695, 939, 500)):
     R = np.ones(wls.shape[0], dtype='float')
     return Spectrum(inc_ang, wls, R)
 
+def get_anti_reflector_spec(inc=0., wls=np.linspace(390, 710, 320)):
+    R = np.zeros(wls.shape[0], dtype='float')
+    return Spectrum(inc, wls, R)
 
 def get_edge_filter_design(inc, wls):
     # TODO: horrible naming...

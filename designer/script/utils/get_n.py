@@ -12,6 +12,8 @@ import designer.material_data.exp_eq as exp_eq
 def get_n_SiO2(wl):
     return exp_eq.get_n_SiO2_Sellmeier(wl)
 
+def get_n_SiO2_exp(wl):
+    return get_SiO2_exp(wl)
 
 def get_n_TiO2(wl):
     return exp_eq.get_n_TiO2_Sellmeier(wl)
@@ -106,3 +108,34 @@ def get_Si_exp(wl):
         n_Si_interp = scipy.interpolate.interp1d(wls_Si, n_Si)
 
     return n_Si_interp(wl)
+
+
+cached_SiO2 = False
+wls_SiO2 = None
+n_SiO2 = None
+n_SiO2_interp = None
+
+
+def get_SiO2_exp(wl):
+    '''
+    Get refractive index & extinction coeff from file.
+    NOTE: input wls instead of iteratively calling this function
+    has significantly better performance (for ~ 1000 pts, ~1 s 
+    compared to ~ 0.003 s)
+
+    Parameters:
+        wl: wavelength OR wavelengths (array-like) to compute wl
+    '''
+    # Si: Green 2008
+    # NOTE: 300 nm - 1510 nm
+
+    global cached_SiO2, wls_SiO2, n_SiO2
+    if not cached_SiO2:
+        wls_SiO2, n_SiO2 = load_from_file(
+            'SiO2_n_Rodriguez-de_Marcos.csv',
+            'SiO2_k_Rodriguez-de_Marcos.csv',
+        )
+        n_SiO2 = n_SiO2.real
+        n_SiO2_interp = scipy.interpolate.interp1d(wls_SiO2, n_SiO2)
+
+    return n_SiO2_interp(wl)

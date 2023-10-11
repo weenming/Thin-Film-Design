@@ -26,4 +26,4 @@ def get_n_SiO2_Cauchy(wl):
 
 def get_n_MgF2_Cauchy(wl):
     wl = wl * 1e-3
-    return 1.384 - 3.3651e-3 / wl ** 2+ 6.429e-4 / wl ** 4
+    return 1.384 - 3.651e-3 / wl ** 2 + 6.429e-4 / wl ** 4

@@ -45,7 +45,9 @@ Use `conda env create --file=environment.yml` to install dependencies.
 
 Note that the version of cudatoolkit should match that of the version of the driver, which can be found by the tool `nvidia-smi`
 
-> It works out of the box for CUDA C/C++ as far as I am aware - however, because Numba doesn't know anything about forward compatibility it always tries to generate PTX for the latest version supported by the toolkit and not the driver, so the driver refuses to accept it for linking [Thread](https://github.com/numba/numba/issues/7006)
+> It works out of the box for CUDA C/C++ as far as I am aware - however, because Numba doesn't know anything about forward compatibility it always tries to generate PTX for the latest version supported by the toolkit and not the driver, so the driver refuses to accept it for linking [Thread](https://github.com/numba/numba/issues/7006). 
+
+> CUDA driver 12.0 seems to be compatible with cudatoolkit 11.7, but driver 11.2 does not.
 
 
 ## File structure

@@ -1,4 +1,4 @@
-name: tf_design_2
+name: tf_design
 channels:
     - conda-forge
 dependencies:

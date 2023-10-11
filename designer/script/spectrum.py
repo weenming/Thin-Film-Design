@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 
 
 class BaseSpectrum(ABC):
+    # TODO: add support for polarization
     def __init__(self, incident_angle, wavelengths, spec_R, spec_T):
         self.INC_ANG = incident_angle
         self.WLS = wavelengths

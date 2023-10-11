@@ -17,8 +17,8 @@ class BaseFilm(ABC):
         self._register_get_n('sub', substrate)
         self._register_get_n('inc', incidence)
 
-    def _register_get_n(self, name: str, material):
-        if type(material) is str:
+    def _register_get_n(self, name: str, material) -> Callable:
+        if type(material) is str or type(material) is np.str_:
             try:
                 exec(f"self.get_n_{name} = get_n.get_n_{material}")
                 self.materials[name] = material
@@ -33,6 +33,8 @@ class BaseFilm(ABC):
         else:
             raise ValueError(
                 'bad material. should be either name defined in utils.get_n or a float')
+        
+        return getattr(self, f'get_n_{name}')
 
     # spectrum-related methods
 
@@ -122,7 +124,7 @@ class BaseFilm(ABC):
         return self.d
 
     def update_d(self, d):
-        self.d = d
+        self.d = np.ascontiguousarray(d)
         for spec in self.get_all_spec_list():
             spec.outdate()  # set the oudated flag of the stored spectrum(s)
         return
@@ -423,3 +425,133 @@ class EqOTFilm(FreeFormFilm):
         self.d /= self.get_n().real
         self.d *= total_ot / \
             self.get_optical_thickness(WAHTEVER_WL)
+
+class MultiMaterialFilm(BaseFilm):
+    """
+    Film that consist of multiple materials. Only d is modifiable. Materials are
+    non - absorbing。
+
+    Structure of the film: ABCD...substrate.
+    0 - th layer is incident material.
+    1 - st layer (self.d[0]) is A
+    2 - nd layer (self.d[1]) is B
+    3 - rd layer (self.d[2]) is C
+    ...
+    last layer is substrate
+
+    Arguments:
+        A, B, substrate(str):
+            material name of A, B, substrate
+
+        d_init(numpy array): initial d.
+        incidence(str): material of incidence
+
+    Attributes:
+        d(numpy array):
+            thicknesses of each layer. d[0] is the first A.
+            d.shape[0] is the layer number
+        get_n_A, get_n_B, get_n_sub, get_n_inc (function: wl -> n):
+            refractive indices of materials A, B, substrate and
+            incident material
+        spectrum(list of SpectrumSimple instances):
+
+        n_arr (numpy array):
+            array of refractive indices of layers at different wls
+        materials_list (numpy array):
+            materials strings excluding incidence medium and substrate 
+            NOTE that this is different from self.materials which is a dict
+    """
+    get_n_ls: [Callable]
+    d: NDArray
+    materials_list: NDArray
+    get_n_ls: list[callable]
+    
+
+    def __init__(
+        self,
+        materials: NDArray, # array of strings 
+        substrate: str,
+        d_init: NDArray,
+        incidence='Air'
+    ):
+        super().__init__(substrate, incidence)  # register sub and inc
+        self.materials_list = copy.deepcopy(materials)
+        self.register_multiple_get_n()
+        
+        if d_init.shape == ():
+            d_init = np.array([d_init])
+
+        assert len(d_init.shape) == 1, "Should be 1 dim array!"
+
+        self.d = d_init
+        self.spectrums: list[SpectrumSimple] = []
+
+    def update_d(self, d):
+        assert d.shape == self.d.shape, f'if layer count changes, \
+        material list should also be maintained! {d.shape} != {self.d.shape}'
+    # all layers should have non-zero thickness, except right after insertion
+    # so check by explicitly calling these methods
+    def register_multiple_get_n(self):
+        # test
+        self.get_n_ls = []
+        for i, material in enumerate(self.materials_list):
+            get_n_i = self._register_get_n(f'{i}th_layer', material)
+            self.get_n_ls.append(get_n_i)
+
+    def check_thickness(self):
+        assert np.min(self.d) > 0, "layers of zero thickness!"
+
+    def remove_layer(self, rm_idx):
+        # first layer is never removed
+        self.materials_list = np.delete(self.materials_list, rm_idx)
+        self.d = np.delete(self.d, rm_idx)
+        self.register_multiple_get_n()
+
+    def remove_negative_thickness_layer(self, exclude=[]):
+        d = self.get_d()
+        rm_idx = np.where(self.d < 0)
+        rm_idx = [i for i in rm_idx if i not in exclude]
+        self.remove_layer(rm_idx)
+
+    # Helper functions of needle insertion
+    def insert_layer(self, layer_index, position, thickness):
+        raise NotImplementedError
+
+    def get_insert_layer_n(self, index):
+        raise NotImplementedError
+
+    # Implement abstract methods
+
+    def calculate_n_array(self, wls: NDArray):
+        """
+        calculate n at different wl for each layer.
+
+        Returns:
+            2d NDArray, size is wls number * layer number. Refractive indices
+        """
+        n_arr = np.empty(
+            (wls.shape[0], self.get_layer_number()), dtype='complex128')
+        for i, get_n in enumerate(self.get_n_ls):
+            n: NDArray = get_n(wls)
+            n_arr[:, i] = n
+
+        return n_arr
+
+    def get_optical_thickness(self, wl, neglect_last_layer=False) -> float:
+        """
+        Calculate the optical thickness of this film
+
+        Arguments:
+            wl (float):
+                wavelength at which refractive index is evaluated
+        """
+        l = self.get_layer_number()
+        n_ls = np.array([get_n(wl) for get_n in self.get_n_ls])
+        ot = np.sum(n_ls * self.d)
+        if neglect_last_layer:
+            ot -= self.get_d()[-1] * self.get_n_ls[-1](wl)
+        return ot
+
+    def calculate_spectrum(self):
+        for s in self.spectrums:
+            s.calculate(get_spectrum.get_spectrum_free)

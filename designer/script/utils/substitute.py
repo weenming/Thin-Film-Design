@@ -32,7 +32,7 @@ def equal_optical_thickness(f: TwoMaterialFilm, d_min):
 
     return count
 
-def equal_optical_thickness_new(f: TwoMaterialFilm, d_min, wl=700):
+def equal_optical_thickness_new(f: TwoMaterialFilm, d_min, wl=700, eq_thickness=False):
     d = f.get_d()
     # neglect first layer...
     del_idx = []
@@ -44,7 +44,10 @@ def equal_optical_thickness_new(f: TwoMaterialFilm, d_min, wl=700):
         n_arr = f.calculate_n_array(np.array([wl]))
         optical_ratio = n_arr[0, i] / n_arr[0, i + 1]
         count += 1
-        db = optical_ratio * d[i]
+        if eq_thickness:
+            db = d[i]
+        else:
+            db = optical_ratio * d[i]
         
         # update d
         # determine which index to merge the thin layer into

@@ -489,6 +489,8 @@ class MultiMaterialFilm(BaseFilm):
     def update_d(self, d):
         assert d.shape == self.d.shape, f'if layer count changes, \
         material list should also be maintained! {d.shape} != {self.d.shape}'
+        super().update_d(d)
+
     # all layers should have non-zero thickness, except right after insertion
     # so check by explicitly calling these methods
     def register_multiple_get_n(self):

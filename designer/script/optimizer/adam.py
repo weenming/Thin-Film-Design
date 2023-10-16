@@ -3,7 +3,7 @@ sys.path.append('./designer/script/')
 
 
 from tmm.get_jacobi_n_adjoint import get_jacobi_free_form
-from tmm.get_jacobi import get_jacobi_simple
+from tmm.get_jacobi_adjoint import get_jacobi_simple
 from tmm.get_spectrum import get_spectrum_free, get_spectrum_simple
 
 from optimizer.grad_helper import stack_f, stack_J, stack_init_params

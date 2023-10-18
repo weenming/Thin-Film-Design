@@ -185,14 +185,14 @@ def forward_propagation_simple(
     # TODO: add the influence of n of incident material (when not air)
     Ws = cuda.local.array((2, 2), dtype="complex128")
     Ws[0, 0] = 0.5
-    Ws[0, 1] = 0.5 / cos_inc
+    Ws[0, 1] = 0.5 / (cos_inc * n_inc)
     Ws[1, 0] = 0.5
-    Ws[1, 1] = -0.5 / cos_inc
+    Ws[1, 1] = -0.5 / (cos_inc * n_inc)
 
     Wp = cuda.local.array((2, 2), dtype="complex128")
-    Wp[0, 0] = 0.5
+    Wp[0, 0] = 0.5 / n_inc
     Wp[0, 1] = 0.5 / cos_inc
-    Wp[1, 0] = 0.5
+    Wp[1, 0] = 0.5 / n_inc
     Wp[1, 1] = -0.5 / cos_inc
 
     for i in range(layer_number):
@@ -242,7 +242,7 @@ def forward_propagation_simple(
     # T should be R - 1
     ts = 1 / Ws[0, 0]
     tp = 1 / Wp[0, 0]
-    T = cos_sub / cos_inc * n_sub * \
+    T = cos_sub * n_sub / (cos_inc * n_inc) * \
         (s_ratio * ts * ts.conjugate() + p_ratio * tp * tp.conjugate()) \
         / (s_ratio + p_ratio)
     spectrum[thread_id + wls_size] = T.real
@@ -397,14 +397,14 @@ def forward_propagation_free(
     # TODO: add the influence of n of incident material (when not air)
     Ws = cuda.local.array((2, 2), dtype="complex128")
     Ws[0, 0] = 0.5
-    Ws[0, 1] = 0.5 / cos_inc
+    Ws[0, 1] = 0.5 / (cos_inc * n_inc)
     Ws[1, 0] = 0.5
-    Ws[1, 1] = -0.5 / cos_inc
-
+    Ws[1, 1] = -0.5 / (cos_inc * n_inc)
+    
     Wp = cuda.local.array((2, 2), dtype="complex128")
-    Wp[0, 0] = 0.5
+    Wp[0, 0] = 0.5 / n_inc
     Wp[0, 1] = 0.5 / cos_inc
-    Wp[1, 0] = 0.5
+    Wp[1, 0] = 0.5 / n_inc
     Wp[1, 1] = -0.5 / cos_inc
 
     for i in range(layer_number):
@@ -454,7 +454,7 @@ def forward_propagation_free(
     # T should be R - 1
     ts = 1 / Ws[0, 0]
     tp = 1 / Wp[0, 0]
-    T = cos_sub / cos_inc * n_sub * \
+    T = cos_sub * n_sub / (cos_inc * n_inc) * \
         (s_ratio * ts * ts.conjugate() + p_ratio * tp * tp.conjugate()) \
         / (s_ratio + p_ratio)
     spectrum[thread_id + wls_size] = T.real

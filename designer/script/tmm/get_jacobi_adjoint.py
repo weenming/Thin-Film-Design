@@ -229,7 +229,7 @@ def forward_and_backward_propagation(
     fill_arr(
         partial_Ws_T,
         ts.conjugate() * (-1 / W_back_s[0, 0] ** 2) *
-            (cos_sub / cos_inc * n_sub),
+            (cos_sub * n_sub / (cos_inc * n_inc)),
         0,
         0,
         0
@@ -237,7 +237,7 @@ def forward_and_backward_propagation(
     fill_arr(
         partial_Wp_T,
         tp.conjugate() * (-1 / W_back_p[0, 0] ** 2) *
-            (cos_sub / cos_inc * n_sub),
+            (cos_sub * n_sub / (cos_inc * n_inc)),
         0,
         0,
         0

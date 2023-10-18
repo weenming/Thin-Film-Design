@@ -38,12 +38,12 @@ def make_triband_filter_design(init_film=whatever_film):
     return design
 
 
-def get_minus_filter_spec(wls):
+def get_minus_filter_spec(wls, h=0.8, left=510., right=555.):
     '''Settings adpted from Jinlong Zhang et al. Thin-film thickness-modulated designs for optical minus filter, 2013
     '''
     assert np.min(wls) < 510 and np.max(wls) > 555, 'wls must cover stop band'
-    h = 0.8
-    R = (wls > 510.) & (555. > wls)
+    
+    R = (wls > left) & (right > wls)
     R = R.astype(float)
     R *= h
     T = 1 - R

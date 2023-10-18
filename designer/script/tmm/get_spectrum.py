@@ -220,13 +220,13 @@ def forward_propagation_simple(
     # technically this is merely D which is not M (D^{-2}PD)
     Ms[0, 0] = 1.
     Ms[0, 1] = 1.
-    Ms[1, 0] = n_sub * cos_sub
-    Ms[1, 1] = n_sub * cos_sub
+    Ms[1, 0] = n_sub * cos_sub # this should not matter because E_0=(1, 0)
+    Ms[1, 1] = -n_sub * cos_sub # this should not matter because E_0=(1, 0)
 
     Mp[0, 0] = n_sub
     Mp[0, 1] = n_sub
-    Mp[1, 0] = cos_sub
-    Mp[1, 1] = cos_sub
+    Mp[1, 0] = cos_sub # this should not matter because E_0=(1, 0)
+    Mp[1, 1] = -cos_sub # this should not matter because E_0=(1, 0)
 
     mul_right(Ws, Ms)
     mul_right(Wp, Mp)
@@ -433,12 +433,12 @@ def forward_propagation_free(
     Ms[0, 0] = 1.
     Ms[0, 1] = 1.
     Ms[1, 0] = n_sub * cos_sub
-    Ms[1, 1] = n_sub * cos_sub
+    Ms[1, 1] = -n_sub * cos_sub
 
     Mp[0, 0] = n_sub
     Mp[0, 1] = n_sub
     Mp[1, 0] = cos_sub
-    Mp[1, 1] = cos_sub
+    Mp[1, 1] = -cos_sub
 
     mul_right(Ws, Ms)
     mul_right(Wp, Mp)

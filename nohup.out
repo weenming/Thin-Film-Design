@@ -6198,3 +6198,13 @@ iter 6184, loss 0.11593774868273755
 iter 6185, loss 0.11593771447199776
 iter 6186, loss 0.11593738778380724
 iter 6187, loss 0.11593671002550426
+Traceback (most recent call last):
+  File "working/free_form/tuning_total_ot.py", line 9, in <module>
+    from film import FreeFormFilm, BaseFilm, TwoMaterialFilm, EqOTFilm
+  File "/root/Thin-Film-Design/working/free_form/../../designer/script/film.py", line 2, in <module>
+    from numpy.typing import NDArray
+ModuleNotFoundError: No module named 'numpy.typing'
+/home/vipuser/miniconda3/envs/tf_design/lib/python3.10/site-packages/numba/cuda/dispatcher.py:488: NumbaPerformanceWarning: Grid size 32 will likely result in GPU under-utilization due to low occupancy.
+  warn(NumbaPerformanceWarning(msg))
+/home/vipuser/miniconda3/envs/tf_design/lib/python3.10/site-packages/numba/cuda/dispatcher.py:488: NumbaPerformanceWarning: Grid size 32 will likely result in GPU under-utilization due to low occupancy.
+  warn(NumbaPerformanceWarning(msg))

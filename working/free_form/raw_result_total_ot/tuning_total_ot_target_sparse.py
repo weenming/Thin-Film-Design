@@ -62,7 +62,7 @@ def exp(n_size, each_ot, target):
 # wl_max = 1000 # 1 / wl_max - 1 / wl_min = 1 / 1000
 
 # target = make_triband_filter_design().target_specs # 1 / wl_max - 1 / wl_min = 
-wls = np.linspace(400., 700., 500)
+wls = np.linspace(400., 700., 50)
 target = [get_minus_filter_spec(wls)]
 target_name = 'minus_filter'
 

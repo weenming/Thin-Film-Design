@@ -62,11 +62,11 @@ def exp(n_size, each_ot, target):
 # wl_max = 1000 # 1 / wl_max - 1 / wl_min = 1 / 1000
 
 # target = make_triband_filter_design().target_specs # 1 / wl_max - 1 / wl_min = 
-wls = np.linspace(400., 700., 50)
+wls = np.linspace(300., 1000., 500)
 target = [get_minus_filter_spec(wls)]
 target_name = 'minus_filter'
 
-# %%
+# %%nvidias
 # test
 loss, film = exp(1000, 1000, target) # this is sufficient for spectrum under-sampling
 
@@ -81,7 +81,7 @@ ax.set_ylabel('R')
 ax.set_xlabel('wl')
 
 # %%
-each_ots = np.array([i for i in 10 ** np.linspace(-1, 3, 50)])
+each_ots = np.array([i for i in 10 ** np.linspace(0, 3, 50)])
 n_sizes = np.array([int(i) for i in 10 ** np.linspace(0, 3, 50)])
 
 
@@ -102,6 +102,6 @@ for rep in range(reps):
             best_film_arr_rep[-1][-1].append(best_film)
 print(best_loss_arr_rep)
 
-save(os.path.dirname(__file__) + f'/raw_result_total_ot/free_form_params_{target_name}_target_sparse', np.array(best_loss_arr_rep), np.array(best_film_arr_rep))
+save(os.path.dirname(__file__) + f'/raw_result_total_ot/free_form_params_{target_name}_target_300_1000', np.array(best_loss_arr_rep), np.array(best_film_arr_rep))
 
 

@@ -62,8 +62,10 @@ def exp(n_size, each_ot, target):
 # wl_max = 1000 # 1 / wl_max - 1 / wl_min = 1 / 1000
 
 # target = make_triband_filter_design().target_specs # 1 / wl_max - 1 / wl_min = 
-wls = np.linspace(300., 1000., 500)
-target = [get_minus_filter_spec(wls)]
+left_m, left, right, right_m = 200, 500, 600, 1500
+n_wl = 500
+wls = np.linspace(left_m, right_m, n_wl)
+target = [get_minus_filter_spec(wls, left=left, right=right)]
 target_name = 'minus_filter'
 
 # %%nvidias
@@ -102,6 +104,6 @@ for rep in range(reps):
             best_film_arr_rep[-1][-1].append(best_film)
 print(best_loss_arr_rep)
 
-save(os.path.dirname(__file__) + f'/raw_result_total_ot/free_form_params_{target_name}_target_300_1000', np.array(best_loss_arr_rep), np.array(best_film_arr_rep))
+save(os.path.dirname(__file__) + f'/raw_result_total_ot/free_form_params_{target_name}_target_{left_m}_{left}_{right}_{right_m}', np.array(best_loss_arr_rep), np.array(best_film_arr_rep))
 
 

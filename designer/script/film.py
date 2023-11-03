@@ -10,7 +10,7 @@ import tmm.get_spectrum as get_spectrum
 
 class BaseFilm(ABC):
     d: NDArray
-    spectrums: list[SpectrumSimple]
+    spectra: list[SpectrumSimple]
 
     def __init__(self, substrate, incidence):
         self.materials = {}
@@ -44,41 +44,41 @@ class BaseFilm(ABC):
 
         """
 
-        for s in self.spectrums:
+        for s in self.spectra:
             if np.array_equal(s.WLS, wls) and s.INC_ANG == inc_ang:
                 return s
         spec = SpectrumSimple(inc_ang, wls, self)
-        self.spectrums.append(spec)
+        self.spectra.append(spec)
         return spec
 
     def remove_spec_param(self, inc_ang=None, wls=None):
         assert wls is not None or inc_ang is not None, "Must specify which spec to del"
         count = 0
-        for s in self.spectrums:
+        for s in self.spectra:
             if (inc_ang is None and np.array_equal(s.WLS, wls)) or \
                 (wls is None and s.INC_ANG == inc_ang) or \
                     (np.array_equal(s.WLS, wls) == s.INC_ANG == inc_ang):
-                self.spectrums.remove(s)
+                self.spectra.remove(s)
                 count += 1
         return count
 
     def remove_all_spec_param(self):
-        self.spectrums = []
+        self.spectra = []
         return
 
     def get_spec(self, inc_ang=None, wls=None) -> SpectrumSimple:
         """ return spectrum with specified wls and inc_ang
         """
-        if len(self.spectrums) == 1 and inc_ang is None and wls is None:
+        if len(self.spectra) == 1 and inc_ang is None and wls is None:
             # when only one spectrum, return the only one spectrum
-            return self.spectrums[0]
+            return self.spectra[0]
 
         else:
             if inc_ang is None or wls is None:
                 raise ValueError(
                     "In the case of multiple spectrums, must specify inc_ang\
                     and wls")
-            for s in self.spectrums:
+            for s in self.spectra:
                 if np.array_equal(s.WLS, wls) and s.INC_ANG == inc_ang:
                     return s
             # Not found, add to get_spec
@@ -86,7 +86,7 @@ class BaseFilm(ABC):
             return self.add_spec_param(inc_ang, wls)
 
     def get_all_spec_list(self) -> list[SpectrumSimple]:
-        return self.spectrums
+        return self.spectra
 
     # n_array related
     @abstractmethod
@@ -179,7 +179,7 @@ class FreeFormFilm(BaseFilm):
         self.d *= total_gt / (self.d).sum()
         init_n_ls = init_n_ls.astype('complex128')
         self.n = init_n_ls
-        self.spectrums = []
+        self.spectra = []
 
     def calculate_n_array(self, wls: NDArray):
         n_arr = np.empty((wls.shape[0], self.get_layer_number()),
@@ -209,7 +209,7 @@ class FreeFormFilm(BaseFilm):
         return self.n
 
     def calculate_spectrum(self):
-        for s in self.spectrums:
+        for s in self.spectra:
             s.calculate(get_spectrum.get_spectrum_free)
 
     def project_to_two_material_film(self, n1, n2, material1=None, material2=None):

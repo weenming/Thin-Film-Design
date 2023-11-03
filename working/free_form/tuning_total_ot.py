@@ -89,11 +89,13 @@ for exp_i in range(3):
             for j, n_size in enumerate(n_sizes):
                 print((i + j / n_sizes.shape[0]) / each_ots.shape[0])
                 best_loss, best_film = exp(n_size, ot, target)
+                best_film.remove_all_spec_param() # save storage
                 films_arr_rep[-1][-1].append([])
                 best_loss_arr_rep[-1][-1].append(best_loss)
                 best_film_arr_rep[-1][-1].append(best_film)
     print(best_loss_arr_rep)
 
-    save(os.path.dirname(__file__) + f'/raw_result_total_ot/free_form_params_{target_name}_target_{left_m}_{left}_{right}_{right_m}', np.array(best_loss_arr_rep), np.array(best_film_arr_rep))
+    save(os.path.dirname(__file__) + f'/raw_result_total_ot/free_form_params_{target_name}_target_{left_m}_{left}_{right}_{right_m}', np.array(best_loss_arr_rep))
+    save(os.path.dirname(__file__) + f'/raw_result/free_form_params_{target_name}_target_{left_m}_{left}_{right}_{right_m}', np.array(best_loss_arr_rep), np.array(best_film_arr_rep))
 
 

@@ -32,7 +32,7 @@ class TestJacobi(unittest.TestCase):
         # must set spec before calculating spec
         jacobi = np.empty((wls.shape[0] * 2, cells * 2), dtype='float')
         get_jacobi_free_form(jacobi, wls, f1.get_d(),
-                             f1.spectrums[0].n, f1.spectrums[0].n_sub, f1.spectrums[0].n_inc, inc_ang)
+                             f1.spectra[0].n, f1.spectra[0].n_sub, f1.spectra[0].n_inc, inc_ang)
 
         # read expected spec from file
         # count relative path from VS Code project root.....
@@ -56,7 +56,7 @@ class TestJacobi(unittest.TestCase):
 
         jacobi = np.empty((wls.shape[0] * 2, cells * 2))
         get_jacobi_free_form(jacobi, wls, f.get_d(),
-                             f.spectrums[0].n, f.spectrums[0].n_sub, f.spectrums[0].n_inc, inc_ang, jacobi.shape[1])
+                             f.spectra[0].n, f.spectra[0].n_sub, f.spectra[0].n_inc, inc_ang, jacobi.shape[1])
 
 
 def test_film_jacobi_debug():
@@ -119,7 +119,7 @@ def make_expected_file():
 def plot_diff_h():
     jacobi_standard = np.empty((wls.shape[0] * 2, cells * 2), dtype='float')
     get_jacobi_free_form(jacobi_standard, wls, f1.get_d(),
-                         f1.calculate_n_array(wls), f1.spectrums[0].n_sub, f1.spectrums[0].n_inc, inc_ang)
+                         f1.calculate_n_array(wls), f1.spectra[0].n_sub, f1.spectra[0].n_inc, inc_ang)
 
     spec_standard = np.empty(wls.shape[0] * 2, dtype='double')
 

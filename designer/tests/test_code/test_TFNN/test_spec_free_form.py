@@ -31,9 +31,9 @@ class TestFilm(unittest.TestCase):
         expected_spec = np.loadtxt(
             "./designer/tests/test_files/expected_spectrum_simple_R_500to1000_20layer_1-2-times-10-SiO2_60inc.csv", dtype="float")
         np.testing.assert_almost_equal(
-            f.spectrums[0].get_R(), expected_spec[:wls.shape[0]])
+            f.spectra[0].get_R(), expected_spec[:wls.shape[0]])
         np.testing.assert_almost_equal(
-            f.spectrums[0].get_T(), expected_spec[wls.shape[0]:])
+            f.spectra[0].get_T(), expected_spec[wls.shape[0]:])
 
 
 def make_expected_spec():

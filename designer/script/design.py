@@ -186,7 +186,7 @@ class DesignForFilm(NeedleDesign, ThicknessGradientDesign):
                  ):
 
         self.target_film = target_film
-        if len(self.target_film.spectrums) == 0:
+        if len(self.target_film.spectra) == 0:
             raise ValueError("target_film must have nonempty spectrum")
         self.target_film.calculate_spectrum()
         target_specs = self.target_film.get_all_spec_list()

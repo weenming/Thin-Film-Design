@@ -1,8 +1,8 @@
 import numpy as np
 import cmath
 from numba import cuda
-from tmm.mat_lib import mul_to, mul_right, mul_left, hadm_mul  # multiply
-from tmm.mat_lib import tsp  # transpose
+from tmm.mat_utils import calc_M, calc_M_inv, fill_arr, mul_to, mul_right, mul_left, hadm_mul  # multiply
+from tmm.mat_utils import tsp  # transpose
 
 
 def get_jacobi_free_form(
@@ -304,52 +304,6 @@ def forward_and_backward_propagation(
         (partial_n_Ts * s_ratio + partial_n_Tp * p_ratio).real / (s_ratio + p_ratio)
 
 
-@cuda.jit
-def calc_M(Ms, Mp, n_inc, inc_ang, ni, di, wl):
-
-    costheta = cmath.sqrt(
-        1 - ((n_inc / ni) * cmath.sin(inc_ang)) ** 2)
-    phi = 2 * cmath.pi * 1j * costheta * ni * di / wl
-    coshi = cmath.cosh(phi)
-    sinhi = cmath.sinh(phi)
-
-    Ms[0, 0] = coshi
-    Ms[0, 1] = sinhi / costheta / ni
-    Ms[1, 0] = costheta * ni * sinhi
-    Ms[1, 1] = coshi
-
-    Mp[0, 0] = coshi
-    Mp[0, 1] = sinhi * ni / costheta
-    Mp[1, 0] = costheta / ni * sinhi
-    Mp[1, 1] = coshi
-
-
-@cuda.jit
-def calc_M_inv(Ms, Mp, n_inc, inc_ang, ni, di, wl):
-    costheta = cmath.sqrt(
-        1 - ((n_inc / ni) * cmath.sin(inc_ang)) ** 2)
-
-    phi = 2 * cmath.pi * 1j * costheta * ni * di / wl
-    coshi = cmath.cosh(phi)
-    sinhi = cmath.sinh(phi)
-
-    Ms[0, 0] = coshi
-    Ms[0, 1] = -sinhi / costheta / ni
-    Ms[1, 0] = -costheta * ni * sinhi
-    Ms[1, 1] = coshi
-
-    Mp[0, 0] = coshi
-    Mp[0, 1] = -sinhi * ni / costheta
-    Mp[1, 0] = -costheta / ni * sinhi
-    Mp[1, 1] = coshi
-
-
-@cuda.jit
-def fill_arr(A, a00, a01, a10, a11):
-    A[0, 0] = a00
-    A[0, 1] = a01
-    A[1, 0] = a10
-    A[1, 1] = a11
 
 
 @cuda.jit

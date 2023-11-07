@@ -1,11 +1,10 @@
 import numpy as np
 import cmath
 from numba import cuda
-from tmm.mat_lib import mul_to, mul_right, mul_left, hadm_mul  # multiply
-from tmm.mat_lib import tsp  # transpose
+from tmm.mat_utils import * 
 
 
-def get_jacobi_simple(
+def get_jacobi_adjoint(
     jacobi,
     wls,
     d,
@@ -59,14 +58,8 @@ def get_jacobi_simple(
     wls_device = cuda.to_device(wls)
     d_device = cuda.to_device(d)
     # copy 2d arr into 1d as contiguous arr to save data transfer
-    n_A = n_layers[:, 0].copy()
-    n_A_device = cuda.to_device(n_A)
-    # may have only 1 layer.
-    if layer_number == 1:
-        n_B_device = cuda.to_device(np.empty(wls_size, dtype='complex128'))
-    else:
-        n_B = n_layers[:, 1].copy()
-        n_B_device = cuda.to_device(n_B)
+    n_layers_device = cuda.to_device(n_layers)
+    
     n_sub_device = cuda.to_device(n_sub)
     n_inc_device = cuda.to_device(n_inc)
 
@@ -84,8 +77,7 @@ def get_jacobi_simple(
         jacobi_device,
         wls_device,
         d_device,
-        n_A_device,
-        n_B_device,
+        n_layers_device, 
         n_sub_device,
         n_inc_device,
         inc_ang_rad,
@@ -104,8 +96,7 @@ def forward_and_backward_propagation(
     jacobi,
     wls,
     d,
-    n_A_arr,
-    n_B_arr,
+    n_layers_device, 
     n_sub_arr,
     n_inc_arr,
     inc_ang,
@@ -141,26 +132,15 @@ def forward_and_backward_propagation(
     # each thread calculates one wl
     wl = wls[thread_id]
     # inc_ang is already in rad
-    n_A = n_A_arr[thread_id]
-    n_B = n_B_arr[thread_id]
+    n_arr = n_layers_device[thread_id, :]
     n_sub = n_sub_arr[thread_id]
     n_inc = n_inc_arr[thread_id]
     # Incident angle in each layer.
     # Snell's law: n_a sin(phi_a) = n_b sin(phi_b)
-    cos_A = cmath.sqrt(1 - ((n_inc / n_A) * cmath.sin(inc_ang)) ** 2)
-    cos_B = cmath.sqrt(1 - ((n_inc / n_B) * cmath.sin(inc_ang)) ** 2)
     cos_inc = cmath.cos(inc_ang)
     cos_sub = cmath.sqrt(1 - ((n_inc / n_sub) * cmath.sin(inc_ang)) ** 2)
 
     # choose cos from arr of size 2.
-    # Use local array which is private to thread
-    cos_arr = cuda.local.array(2, dtype="complex128")
-    cos_arr[0] = cos_A
-    cos_arr[1] = cos_B
-
-    n_arr = cuda.local.array(2, dtype="complex128")
-    n_arr[0] = n_A
-    n_arr[1] = n_B
 
     '''
     FORWARD PROPAGATION
@@ -178,14 +158,14 @@ def forward_and_backward_propagation(
     Mp = cuda.local.array((2, 2), dtype="complex128")
 
     for i in range(layer_number):
-        calc_M(Ms, Mp, cos_arr[i % 2], n_arr[i % 2], d[i], wl)
+        calc_M(Ms, Mp, n_inc, inc_ang, n_arr[i], d[i], wl)
         mul_right(W_back_s, Ms)
         mul_right(W_back_p, Mp)
 
     # construct the last term D_{n+1}
     # technically this is merely D which is not M (D^{-2}PD)
-    fill_arr(Ms, 1, 1, n_sub * cos_sub, n_sub * cos_sub)
-    fill_arr(Mp, n_sub, n_sub, cos_sub, cos_sub)
+    fill_arr(Ms, 1, 1, n_sub * cos_sub, -n_sub * cos_sub)
+    fill_arr(Mp, n_sub, n_sub, cos_sub, -cos_sub)
     mul_right(W_back_s, Ms)
     mul_right(W_back_p, Mp)
 
@@ -265,7 +245,7 @@ def forward_and_backward_propagation(
     mul_left(Mp_inv, W_back_p)
 
     # special case: first layer
-    calc_M_inv(Ms_inv, Mp_inv, cos_arr[0], n_arr[0], d[0], wl)
+    calc_M_inv(Ms_inv, Mp_inv, n_inc, inc_ang, n_arr[0], d[0], wl)
     mul_left(Ms_inv, W_back_s)  # M_0^-1 to left
     mul_left(Mp_inv, W_back_p)  # M_0^-1 to left
 
@@ -274,7 +254,7 @@ def forward_and_backward_propagation(
         # (first layer with material A is the 0-th layer)
 
         calc_partial_d_M(partial_d_Ms, partial_d_Mp,
-                         cos_arr[i % 2], n_arr[i % 2], d[i], wl)
+                         n_inc, inc_ang, n_arr[i], d[i], wl)
 
         mul_to(W_front_s, partial_d_Ms, tmp_res_s)
         mul_to(tmp_res_s, W_back_s, tmp_res_s)
@@ -295,19 +275,17 @@ def forward_and_backward_propagation(
              p_ratio).real / (s_ratio + p_ratio)
 
         # update W_back and W_front
-        calc_M_inv(Ms_inv, Mp_inv, cos_arr[(
-            i + 1) % 2], n_arr[(i + 1) % 2], d[i + 1], wl)
+        calc_M_inv(Ms_inv, Mp_inv, n_inc, inc_ang, n_arr[i + 1], d[i + 1], wl)
         mul_left(Ms_inv, W_back_s)  # M_0^-1 to left
         mul_left(Mp_inv, W_back_p)  # M_0^-1 to left
 
-        calc_M(Ms, Mp, cos_arr[i % 2], n_arr[i % 2], d[i], wl)
+        calc_M(Ms, Mp, n_inc, inc_ang, n_arr[i], d[i], wl)
         mul_right(W_front_s, Ms)  # M_0^-1 to left
         mul_right(W_front_p, Mp)  # M_0^-1 to left
 
     # special case: last layer!
     i = layer_number - 1
-    calc_partial_d_M(partial_d_Ms, partial_d_Mp,
-                     cos_arr[i % 2], n_arr[i % 2], d[i], wl)
+    calc_partial_d_M(partial_d_Ms, partial_d_Mp, n_inc, inc_ang, n_arr[i], d[i], wl)
 
     mul_to(W_front_s, partial_d_Ms, tmp_res_s)
     mul_to(tmp_res_s, W_back_s, tmp_res_s)
@@ -327,52 +305,9 @@ def forward_and_backward_propagation(
 
 
 @cuda.jit
-def calc_M(Ms, Mp, cosi, ni, di, wl):
-
-    phi = 2 * cmath.pi * 1j * cosi * ni * di / wl
-    coshi = cmath.cosh(phi)
-    sinhi = cmath.sinh(phi)
-
-    Ms[0, 0] = coshi
-    Ms[0, 1] = sinhi / cosi / ni
-    Ms[1, 0] = cosi * ni * sinhi
-    Ms[1, 1] = coshi
-
-    Mp[0, 0] = coshi
-    Mp[0, 1] = sinhi * ni / cosi
-    Mp[1, 0] = cosi / ni * sinhi
-    Mp[1, 1] = coshi
-
-
-@cuda.jit
-def calc_M_inv(Ms, Mp, cosi, ni, di, wl):
-
-    phi = 2 * cmath.pi * 1j * cosi * ni * di / wl
-    coshi = cmath.cosh(phi)
-    sinhi = cmath.sinh(phi)
-
-    Ms[0, 0] = coshi
-    Ms[0, 1] = -sinhi / cosi / ni
-    Ms[1, 0] = -cosi * ni * sinhi
-    Ms[1, 1] = coshi
-
-    Mp[0, 0] = coshi
-    Mp[0, 1] = -sinhi * ni / cosi
-    Mp[1, 0] = -cosi / ni * sinhi
-    Mp[1, 1] = coshi
-
-
-@cuda.jit
-def fill_arr(A, a00, a01, a10, a11):
-    A[0, 0] = a00
-    A[0, 1] = a01
-    A[1, 0] = a10
-    A[1, 1] = a11
-
-
-@cuda.jit
-def calc_partial_d_M(res_mat_s, res_mat_p, cosi, ni, di, wl):
-
+def calc_partial_d_M(res_mat_s, res_mat_p, n_inc, inc_ang, ni, di, wl):
+    cosi = cmath.sqrt(
+        1 - ((n_inc / ni) * cmath.sin(inc_ang)) ** 2)
     phi = 2 * cmath.pi * 1j * cosi * ni * di / wl
     coshi = cmath.cosh(phi)
     sinhi = cmath.sinh(phi)

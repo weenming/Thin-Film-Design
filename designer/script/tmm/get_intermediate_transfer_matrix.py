@@ -2,7 +2,7 @@ import numpy as np
 from numba import cuda
 from film import TwoMaterialFilm
 import cmath
-from tmm.mat_lib import mul_right, tsp  # 2 * 2 matrix optr
+from tmm.mat_utils import mul_right, tsp  # 2 * 2 matrix optr
 
 
 def get_W_everywhere(film: TwoMaterialFilm):

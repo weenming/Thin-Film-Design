@@ -1,8 +1,0 @@
-compare 100 nm window and 20 nm window.
-
-Poorer performance in narrower window. Due to larger *portion* of high freq components. See FT power plot.
-
-
-target = make_edgefilter_design(wls=np.linspace(wl_min, wl_max, 500)).target_specs
-max_step = 100
-alpha=0.1

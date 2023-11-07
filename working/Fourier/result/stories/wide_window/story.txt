@@ -1,5 +1,0 @@
-wider window, more determinant freq domain distribution. see compare 1. Thus require "smaller interval" or more DOF.
-
-target = make_edgefilter_design(wls=np.linspace(wl_min, wl_max, 500)).target_specs
-max_step = 100
-alpha=0.1

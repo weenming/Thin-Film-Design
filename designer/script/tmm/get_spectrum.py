@@ -1,7 +1,7 @@
 import numpy as np
 import cmath
 from numba import cuda
-from tmm.mat_lib import mul_right, mul_left, tsp  # 2 * 2 matrix optr
+from tmm.mat_utils import mul_right, mul_left, tsp  # 2 * 2 matrix optr
 
 
 def get_spectrum_simple(

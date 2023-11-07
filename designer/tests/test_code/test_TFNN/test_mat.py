@@ -3,7 +3,7 @@ import numpy as np
 import sys
 sys.path.append("./designer/script")
 
-import tmm.mat_lib as mat
+import tmm.mat_utils as mat
 
 class TestMat(unittest.TestCase):
     def test_mul(self):

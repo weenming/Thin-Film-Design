@@ -69,12 +69,12 @@ def get_jacobi_simple(
     # allocate space for Jacobi matrix
     jacobi_device = cuda.device_array(
         (wls_size * 2, layer_number),
-        strides=(8 * layer_number, 8),
+        # strides=(8 * layer_number, 8),
         dtype="float64"
     )
 
     # invoke kernel
-    block_size = 16  # threads per block
+    block_size = 1  # threads per block
     grid_size = (wls_size + block_size - 1) // block_size  # blocks per grid
 
     forward_and_backward_propagation[grid_size, block_size](
@@ -159,21 +159,21 @@ def forward_and_backward_propagation(jacobi, wls, d, n_A_arr, n_B_arr,
     MAX_LAYER_NUMBER = 250
     # bad news: dynamic memory allocation not supported on GPU
     # NOTE: MAX_LAYER_NUMBER
-    Ms = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
+    Ms = cuda.local.array((100 + 2, 2, 2), dtype="complex128")
     # NOTE: MAX_LAYER_NUMBER
-    Mp = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
+    Mp = cuda.local.array((100 + 2, 2, 2), dtype="complex128")
 
     # Allocate space for W. Fill with first term D_{0}^{-1}
     # TODO: add the influence of n of incident material (when not air)
     # NOTE: MAX_LAYER_NUMBER
-    Ws = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
+    Ws = cuda.local.array((100 + 2, 2, 2), dtype="complex128")
     Ws[0, 0, 0] = 0.5
     Ws[0, 0, 1] = 0.5 / cos_inc
     Ws[0, 1, 0] = 0.5
     Ws[0, 1, 1] = -0.5 / cos_inc
 
     # NOTE: MAX_LAYER_NUMBER
-    Wp = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
+    Wp = cuda.local.array((100 + 2, 2, 2), dtype="complex128")
     Wp[0, 0, 0] = 0.5
     Wp[0, 0, 1] = 0.5 / cos_inc
     Wp[0, 1, 0] = 0.5
@@ -233,14 +233,14 @@ def forward_and_backward_propagation(jacobi, wls, d, n_A_arr, n_B_arr,
     BACKWARD PROPAGATION
     '''
     # NOTE: integer 250 here should be constant MAX_LAYER_NUMBER
-    partial_Ws_r = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
-    partial_Ws_t = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
-    partial_Wp_r = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
-    partial_Wp_t = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
-    partial_Ms_r = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
-    partial_Ms_t = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
-    partial_Mp_r = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
-    partial_Mp_t = cuda.local.array((250 + 2, 2, 2), dtype="complex128")
+    partial_Ws_r = cuda.local.array((100 + 2, 2, 2), dtype="complex128")
+    partial_Ws_t = cuda.local.array((100 + 2, 2, 2), dtype="complex128")
+    partial_Wp_r = cuda.local.array((100 + 2, 2, 2), dtype="complex128")
+    partial_Wp_t = cuda.local.array((100 + 2, 2, 2), dtype="complex128")
+    partial_Ms_r = cuda.local.array((100 + 2, 2, 2), dtype="complex128")
+    partial_Ms_t = cuda.local.array((100 + 2, 2, 2), dtype="complex128")
+    partial_Mp_r = cuda.local.array((100 + 2, 2, 2), dtype="complex128")
+    partial_Mp_t = cuda.local.array((100 + 2, 2, 2), dtype="complex128")
 
     # \partial_{W_{n + 1}} r or t (derivative from the last layer)
     partial_Ws_r[layer_number + 1, 0, 0] = - \

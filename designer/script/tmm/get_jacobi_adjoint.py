@@ -23,7 +23,7 @@ def get_jacobi_simple(
 
     Parameters:
         jacobi (2d np.array):
-            size: wls.shape[0] \cross d.shape[0] 
+            size: 2wls.shape[0] \cross d.shape[0] 
             pre-allocated memory space for returning jacobi
         wls (1d np.array):
             wavelengths of the target spectrum

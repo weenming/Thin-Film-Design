@@ -76,7 +76,7 @@ class SpectrumSimple(BaseSpectrum):
         self.film = film
         self.updated = False
 
-    def calculate(self, spec_func=get_spectrum.get_spectrum_free):
+    def calculate(self, spec_func=get_spectrum.get_spectrum_free, **kwargs):
         # only R spectrum
         spec_func(
             self.spec,
@@ -85,7 +85,8 @@ class SpectrumSimple(BaseSpectrum):
             self.film.calculate_n_array(self.WLS),
             self.n_sub,
             self.n_inc,
-            self.INC_ANG
+            self.INC_ANG, 
+            **kwargs
         )
         self.spec_R = self.spec[:self.WLS.shape[0]]
         self.spec_T = self.spec[self.WLS.shape[0]:]
@@ -97,16 +98,16 @@ class SpectrumSimple(BaseSpectrum):
     def is_updated(self):
         return self.updated
 
-    def get_R(self):
-        if self.updated:
-            return self.spec_R
-        else:
-            self.calculate()
-            return self.spec_R
+    def get_R(self, **kwargs):
+        # if self.updated:
+        #     return self.spec_R
+        # else:
+        self.calculate(**kwargs)
+        return self.spec_R
 
-    def get_T(self):
-        if self.updated:
-            return self.spec_T
-        else:
-            self.calculate()
-            return self.spec_T
+    def get_T(self, **kwargs):
+        # if self.updated:
+        #     return self.spec_T
+        # else:
+        self.calculate(**kwargs)
+        return self.spec_T

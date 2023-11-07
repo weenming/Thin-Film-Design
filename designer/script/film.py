@@ -290,7 +290,7 @@ class TwoMaterialFilm(BaseFilm):
         assert len(d_init.shape) == 1, "Should be 1 dim array!"
 
         self.d = d_init
-        self.spectrums: list[SpectrumSimple] = []
+        self.spectra: list[SpectrumSimple] = []
 
     # all layers should have non-zero thickness, except right after insertion
     # so check by explicitly calling these methods
@@ -395,7 +395,7 @@ class TwoMaterialFilm(BaseFilm):
         return ot
 
     def calculate_spectrum(self):
-        for s in self.spectrums:
+        for s in self.spectra:
             s.calculate(get_spectrum.get_spectrum_simple)
 
 
@@ -484,7 +484,7 @@ class MultiMaterialFilm(BaseFilm):
         assert len(d_init.shape) == 1, "Should be 1 dim array!"
 
         self.d = d_init
-        self.spectrums: list[SpectrumSimple] = []
+        self.spectra: list[SpectrumSimple] = []
 
     def update_d(self, d):
         assert d.shape == self.d.shape, f'if layer count changes, \
@@ -555,5 +555,5 @@ class MultiMaterialFilm(BaseFilm):
         return ot
 
     def calculate_spectrum(self):
-        for s in self.spectrums:
+        for s in self.spectra:
             s.calculate(get_spectrum.get_spectrum_free)

@@ -26,13 +26,13 @@ def get_jacobi_warpper(E_to_loss, device='cuda', mode='d'):
         E = np.zeros((args[0].shape[0] // 2, 2), dtype='complex128')
         get_E_free(E, *args[1:], **kwargs)
         E = torch.tensor(E, device=device, requires_grad=True)
-        jacobi_y_wrt_E = torch.autograd.grad(E_to_loss(E), E)
-        
+
+        jacobi_y_wrt_E = torch.autograd.grad(E_to_loss(E), E)[0].t() # t for correct subsequent reshape
 
         jacobi_M_wrt_x = partial_M_wrt_x(*args_torch, **kwargs)
- 
-        jacobi_y_wrt_x = jacobi_y_wrt_E.reshape(-1, 1, 1, 1) * jacobi_E_wrt_M
-        jacobi_y_wrt_x = (jacobi_y_wrt_x * jacobi_M_wrt_x).sum((0, -1, -2))
+        return jacobi_M_wrt_x
+        jacobi_y_wrt_x = jacobi_y_wrt_E.reshape(-1, 1, 1, 1) * jacobi_E_wrt_M * jacobi_M_wrt_x
+        jacobi_y_wrt_x = jacobi_y_wrt_x.sum((0, -1, -2))
 
         return jacobi_y_wrt_x
     
@@ -48,7 +48,6 @@ def get_partial_M_wrt_d(
     n_inc,
     inc_ang,
 ):
-    d = d.requires_grad_(True)
     wls = wls.unsqueeze(-1)
     cos = torch.sqrt(
         1 - ((n_inc.unsqueeze(-1) / n_layers) * torch.sin(inc_ang)) ** 2)
@@ -57,7 +56,7 @@ def get_partial_M_wrt_d(
     sinhi = torch.sinh(phi)
 
 
-    jacobi = torch.zeros_like(jacobi)
+    jacobi = torch.zeros_like(jacobi, dtype=torch.complex128)
 
     s_idx = torch.hstack((torch.arange(wls.shape[0]), torch.arange(2 * wls.shape[0], 3 * wls.shape[0])))
     jacobi[s_idx, :, 0, 0] = (2 * np.pi * 1j * n_layers * cos / wls * sinhi).repeat(2, 1)

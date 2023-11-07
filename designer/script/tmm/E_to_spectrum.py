@@ -9,8 +9,10 @@ def E_to_R(spectrum, s_ratio=1, p_ratio=1):
     rs = spectrum[:wls_size, 1] / spectrum[:wls_size, 0]
     rp = spectrum[wls_size:, 1] / spectrum[wls_size:, 0]
 
-    Rs = (s_ratio * rs.conj() * rs).real
-    Rp = (p_ratio * rp.conj() * rp).real
+    # Rs = (s_ratio * rs.conj() * rs).real
+    # Rp = (p_ratio * rp.conj() * rp).real
+    Rs = s_ratio * rs.abs().square()
+    Rp = p_ratio * rp.abs().square()
 
     return (Rs + Rp) / (s_ratio + p_ratio)
 

@@ -207,7 +207,7 @@ def get_E_free(
     Arguments:
         spectrum (2D np.array):
             2 * wls.shape[0] \cross 2, type: complex128
-            (E+, E-)^T
+            (E+s, E+p // E-s, E-p)
             pre-allocated memory for returning spectrum 
         wls (1d np.array): 
             wls.shape[0]

@@ -41,7 +41,12 @@ class TestJacobi(unittest.TestCase):
             jacobi[:wls.shape[0], :], expected_jacobi[:wls.shape[0], :] / 2)
         np.testing.assert_almost_equal(
             jacobi[wls.shape[0]:, :], expected_jacobi[wls.shape[0]:, :] / 2)
+    
+    def test_one_layer(self):
+        return
 
+    def test_inc_not1(self):
+        return
 
 def make_diff_jacobi():
     np.random.seed(1)
@@ -73,5 +78,5 @@ def make_diff_jacobi():
 
 
 if __name__ == "__main__":
-    make_diff_jacobi()
+    # make_diff_jacobi()
     unittest.main()

@@ -18,7 +18,6 @@ def get_jacobi_adjoint(
     """
     This function calculates the Jacobi matrix of a given TFNN. Back 
     propagation is implemented to acquire accurate result.
-    NOTE: n_inc is not yet implemented
 
     Parameters:
         jacobi (2d np.array):

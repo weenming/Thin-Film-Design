@@ -19,7 +19,6 @@ def get_jacobi_free_form(
     """
     This function calculates the Jacobi matrix of a given TFNN. Back 
     propagation is implemented to acquire accurate result.
-    NOTE: n_inc is not yet implemented
     NOTE: currently only real part of n is optimized
 
     Parameters:

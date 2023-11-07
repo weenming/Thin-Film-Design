@@ -192,8 +192,6 @@ def get_E_free(
     n_sub,
     n_inc,
     inc_ang,
-    s_ratio=1,
-    p_ratio=1
 ):
     """
     This function calculates the reflectance and transmittance spectrum of a 
@@ -203,10 +201,14 @@ def get_E_free(
 
     Note that memory consumption of forward propagation does not scale with layer. 
 
+    BUG: consider special case inc_ang = 0
+    There should be no difference between s and p, but an extra minus sign is seen.
+
     Arguments:
-        spectrum (1d np.array):
-            2 * wls.shape[0], 2, type: float64
-            pre-allocated memory space for returning spectrum 
+        spectrum (2D np.array):
+            2 * wls.shape[0] \cross 2, type: complex128
+            (E+, E-)^T
+            pre-allocated memory for returning spectrum 
         wls (1d np.array): 
             wls.shape[0]
             wavelengths of the target spectrum
@@ -226,10 +228,6 @@ def get_E_free(
             which means randomized phase difference is assumed.
         p_ratio (float):
             p-polarized light
-
-    Returns:
-        size: 2 \cross wls.shape[0] spectrum 
-        (Reflectance spectrum + Transmittance spectrum).
     """
     # layer number of thin film, substrate not included
     layer_number = d.shape[0]
@@ -253,14 +251,14 @@ def get_E_free(
     # layer_number
 
     # allocate space for R and T spec
-    spectrum_device = cuda.device_array(wls_size * 2, dtype="float64")
+    E_spec_device = cuda.device_array((wls_size * 2, 2), dtype="complex128")
 
     # invoke kernel
     block_size = 16  # threads per block
     grid_size = (wls_size + block_size - 1) // block_size  # blocks per grid
 
     forward_propagation_free[grid_size, block_size](
-        spectrum_device,
+        E_spec_device,
         wls_device,
         d_device,
         n_layers_device,
@@ -269,17 +267,15 @@ def get_E_free(
         inc_ang_rad,
         wls_size,
         layer_number,
-        s_ratio,
-        p_ratio
     )
     cuda.synchronize()
     # copy to pre-allocated space
-    spectrum_device.copy_to_host(spectrum)
+    E_spec_device.copy_to_host(spectrum)
 
 
 @cuda.jit
 def forward_propagation_free(
-    spectrum,
+    E_spec,
     wls,
     d,
     n_layers,
@@ -288,8 +284,6 @@ def forward_propagation_free(
     inc_ang,
     wls_size,
     layer_number,
-    s_ratio,
-    p_ratio
 ):
     """
     Parameters:
@@ -381,16 +375,7 @@ def forward_propagation_free(
 
     # retrieve R and T (calculate the factor before energy flux)
     # Note that spectrum is array on device
-    rs = Ws[1, 0] / Ws[0, 0]
-    rp = Wp[1, 0] / Wp[0, 0]
-    R = (s_ratio * rs * rs.conjugate() + p_ratio * rp * rp.conjugate()) \
-        / (s_ratio + p_ratio)
-    spectrum[thread_id] = R.real
+    for i in [0, 1]:
+        E_spec[thread_id, i] = Ws[i, 0]  # s-polarized
+        E_spec[thread_id + wls_size, i] = Wp[i, 0]  # p-polarized
 
-    # T should be R - 1
-    ts = 1 / Ws[0, 0]
-    tp = 1 / Wp[0, 0]
-    T = cos_sub * n_sub / (cos_inc * n_inc) * \
-        (s_ratio * ts * ts.conjugate() + p_ratio * tp * tp.conjugate()) \
-        / (s_ratio + p_ratio)
-    spectrum[thread_id + wls_size] = T.real

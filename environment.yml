@@ -13,3 +13,4 @@ dependencies:
     # CUDA driver version can be found using nvidia-smi.
     - cudatoolkit=11.2
     - dill
+    - torch

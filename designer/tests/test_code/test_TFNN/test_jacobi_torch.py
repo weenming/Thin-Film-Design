@@ -21,7 +21,7 @@ class TestJacobi(unittest.TestCase):
         wls = np.linspace(500, 1000, 3)
         inc_ang = 0.
         np.random.seed(0)
-        film = FreeFormFilm(np.random.random(4) * 1 + 1.5, 1000, 1)
+        film = FreeFormFilm(np.random.random(4) * 1 + 1.5, 1000, 2)
         jacobian = np.zeros((wls.shape[0] * 4, film.get_d().shape[0], 2, 2), dtype='complex128')
 
         get_jacobi_E_free_form(
@@ -92,7 +92,7 @@ class TestJacobi(unittest.TestCase):
         jacobian_final = \
             (jacobian * jacobian_r * jacobian_d).real.sum((-1, -2)).reshape(-1, 3, film.get_d().shape[0]).sum(0)
 
-        np.testing.assert_almost_equal(jacobian_final, jacobian_gt[:wls.shape[0], :])
+        np.testing.assert_almost_equal(jacobian_final, 2 * jacobian_gt[:wls.shape[0], :])
 
     def test_film_jacobi_autograd_r(self):
         return

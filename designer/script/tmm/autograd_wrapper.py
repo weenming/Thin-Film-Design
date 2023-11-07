@@ -28,9 +28,9 @@ def get_jacobi_warpper(E_to_loss, device='cuda', mode='d'):
         E = torch.tensor(E, device=device, requires_grad=True)
 
         jacobi_y_wrt_E = torch.autograd.grad(E_to_loss(E), E)[0].t() # t for correct subsequent reshape
-
         jacobi_M_wrt_x = partial_M_wrt_x(*args_torch, **kwargs)
-        return jacobi_M_wrt_x
+        return jacobi_E_wrt_M * jacobi_M_wrt_x
+        # y_E tested, E_M not tested, M_x tested
         jacobi_y_wrt_x = jacobi_y_wrt_E.reshape(-1, 1, 1, 1) * jacobi_E_wrt_M * jacobi_M_wrt_x
         jacobi_y_wrt_x = jacobi_y_wrt_x.sum((0, -1, -2))
 

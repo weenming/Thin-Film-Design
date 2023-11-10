@@ -29,11 +29,13 @@ def get_jacobi_warpper(E_to_loss, device='cuda', mode='d'):
 
         jacobi_y_wrt_E = torch.autograd.grad(E_to_loss(E), E)[0].t() # t for correct subsequent reshape
         jacobi_M_wrt_x = partial_M_wrt_x(*args_torch, **kwargs)
-        return jacobi_E_wrt_M * jacobi_M_wrt_x
         # y_E tested, E_M not tested, M_x tested
-        jacobi_y_wrt_x = jacobi_y_wrt_E.reshape(-1, 1, 1, 1) * jacobi_E_wrt_M * jacobi_M_wrt_x
+        # NOTE: TO CHECK
+        jacobi_y_wrt_x = jacobi_y_wrt_E.reshape(-1, 1, 1, 1).conj() * jacobi_E_wrt_M * jacobi_M_wrt_x
+        # collect chain rule
         jacobi_y_wrt_x = jacobi_y_wrt_x.sum((0, -1, -2))
-
+        if mode == 'd':
+            jacobi_y_wrt_x = jacobi_y_wrt_x.real
         return jacobi_y_wrt_x
     
     return get_jacobi_y_wrt_x_free_form
@@ -72,3 +74,7 @@ def get_partial_M_wrt_d(
     jacobi[p_idx, :, 1, 1] = (2 * np.pi * 1j * n_layers * cos / wls * sinhi).repeat(2, 1)
     
     return jacobi
+
+def get_partial_M_wrt_n():
+    raise NotImplementedError('check Wintinger calculus before implementation!\
+                    we need correct complex grad here for n can be complex')

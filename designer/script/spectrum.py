@@ -1,4 +1,5 @@
 import numpy as np
+from tmm import get_E
 import tmm.get_spectrum as get_spectrum
 from abc import ABC, abstractmethod
 
@@ -90,24 +91,40 @@ class SpectrumSimple(BaseSpectrum):
         )
         self.spec_R = self.spec[:self.WLS.shape[0]]
         self.spec_T = self.spec[self.WLS.shape[0]:]
-        self.updated = True
 
-    def outdate(self):
-        self.updated = False
-
-    def is_updated(self):
-        return self.updated
+    def calculate_E(self, spec_func=get_E.get_E_free, **kwargs):
+        spec_func(
+            self.spec,
+            self.WLS,
+            self.film.get_d(),
+            self.film.calculate_n_array(self.WLS),
+            self.n_sub,
+            self.n_inc,
+            self.INC_ANG, 
+            **kwargs
+        )
+        self.r = self.spec[:self.WLS.shape[0]]
 
     def get_R(self, **kwargs):
-        # if self.updated:
-        #     return self.spec_R
-        # else:
         self.calculate(**kwargs)
         return self.spec_R
 
     def get_T(self, **kwargs):
-        # if self.updated:
-        #     return self.spec_T
-        # else:
         self.calculate(**kwargs)
         return self.spec_T
+
+    def get_r(self, **kwargs):
+        self.calculate_E(**kwargs)
+        return self.r
+    
+    def get_tanPsi(self):
+        r = self.get_r()
+        rs = r[:, 0]
+        rp = r[:, 1]
+        return np.abs(rs / rp)
+
+    def get_delta(self):
+        r = self.get_r()
+        rs = r[:, 0]
+        rp = r[:, 1]
+        return np.angle(rs / rp)

@@ -10,7 +10,7 @@ def get_jacobi_warpper(E_to_loss, device='cuda', mode='d'):
     if mode == 'd':
         partial_M_wrt_x = get_partial_M_wrt_d
 
-    def get_jacobi_y_wrt_x_free_form(*args, **kwargs):
+    def get_jacobi_y_wrt_x_free_form(*args, yield_intermediate=False, **kwargs):
         '''args and kwargs should be consistent with get_jacobi_E_free_form
         '''
 
@@ -36,6 +36,8 @@ def get_jacobi_warpper(E_to_loss, device='cuda', mode='d'):
         jacobi_y_wrt_x = jacobi_y_wrt_x.sum((0, -1, -2))
         if mode == 'd':
             jacobi_y_wrt_x = jacobi_y_wrt_x.real
+        if yield_intermediate:
+            return jacobi_y_wrt_E, jacobi_E_wrt_M, jacobi_M_wrt_x, jacobi_y_wrt_x
         return jacobi_y_wrt_x
     
     return get_jacobi_y_wrt_x_free_form
@@ -50,10 +52,11 @@ def get_partial_M_wrt_d(
     n_inc,
     inc_ang,
 ):
+    inc_ang = inc_ang * torch.pi / 180 # .....this cost me a whole freaking afternoon
     wls = wls.unsqueeze(-1)
     cos = torch.sqrt(
         1 - ((n_inc.unsqueeze(-1) / n_layers) * torch.sin(inc_ang)) ** 2)
-    phi = 2 * np.pi * 1j * cos * n_layers * d / wls
+    phi = 2 * torch.pi * 1j * cos * n_layers * d / wls
     coshi = torch.cosh(phi)
     sinhi = torch.sinh(phi)
 
@@ -65,7 +68,6 @@ def get_partial_M_wrt_d(
     jacobi[s_idx, :, 0, 1] = (2 * np.pi * 1j / wls * coshi).repeat(2, 1)
     jacobi[s_idx, :, 1, 0] = (2 * np.pi * 1j * n_layers.square() * cos.square() / wls * coshi).repeat(2, 1)
     jacobi[s_idx, :, 1, 1] = (2 * np.pi * 1j * n_layers * cos / wls * sinhi).repeat(2, 1)
-    
 
     p_idx = torch.hstack((torch.arange(wls.shape[0], 2 * wls.shape[0]), torch.arange(3 * wls.shape[0], 4 * wls.shape[0])))
     jacobi[p_idx, :, 0, 0] = (2 * np.pi * 1j * n_layers * cos / wls * sinhi).repeat(2, 1)

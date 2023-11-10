@@ -344,10 +344,13 @@ def forward_propagation_free(
         coshi = cmath.cosh(phi)
         sinhi = cmath.sinh(phi)
 
+            
         Ms[0, 0] = coshi
         Ms[0, 1] = sinhi / cosi / ni
         Ms[1, 0] = cosi * ni * sinhi
         Ms[1, 1] = coshi
+        if i == 0:
+            Ms[0, 0] += 1e-5
 
         Mp[0, 0] = coshi
         Mp[0, 1] = sinhi * ni / cosi

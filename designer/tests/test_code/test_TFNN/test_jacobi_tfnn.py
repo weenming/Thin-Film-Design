@@ -19,8 +19,9 @@ class TestJacobi(unittest.TestCase):
         np.random.seed(1)
         d_expected = np.random.random(1000) * 10
 
-        substrate = A = "SiO2"
+        A = "SiO2"
         B = "TiO2"
+        substrate = 2
         f = film.TwoMaterialFilm(A, B, substrate, d_expected)
         # must set spec before calculating spec
         inc_ang = 60.  # incident angle in degree
@@ -53,8 +54,9 @@ def make_diff_jacobi():
     layers = 1000
     d_expected = np.random.random(layers) * 10
 
-    substrate = A = "SiO2"
+    A = "SiO2"
     B = "TiO2"
+    substrate = 2
     f = film.TwoMaterialFilm(A, B, substrate, d_expected)
     # must set spec before calculating spec
     inc_ang = 60.  # incident angle in degree
@@ -78,5 +80,5 @@ def make_diff_jacobi():
 
 
 if __name__ == "__main__":
-    # make_diff_jacobi()
+    make_diff_jacobi()
     unittest.main()

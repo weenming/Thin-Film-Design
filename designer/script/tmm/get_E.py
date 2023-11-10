@@ -1,6 +1,5 @@
 import numpy as np
 from numba import cuda
-from film import TwoMaterialFilm
 import cmath
 from tmm.mat_utils import mul_right, tsp  # 2 * 2 matrix optr
 

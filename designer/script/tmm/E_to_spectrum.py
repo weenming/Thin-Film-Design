@@ -5,6 +5,8 @@ def E_to_R(spectrum, s_ratio=1, p_ratio=1):
     '''E: 2D TORCH tensor, (wls.shape[0] * 2, 2) (s+, p+ // s-, p-)
     '''
     wls_size = spectrum.shape[0] // 2
+    if type(spectrum) is not torch.Tensor:
+        spectrum = torch.tensor(spectrum)
     
     rs = spectrum[:wls_size, 1] / spectrum[:wls_size, 0]
     rp = spectrum[wls_size:, 1] / spectrum[wls_size:, 0]
@@ -23,6 +25,8 @@ def E_to_tan2Psi(spectrum):
     returns tan^2 \Psi
     '''
     wls_size = spectrum.shape[0] // 2
+    if type(spectrum) is not torch.Tensor:
+        spectrum = torch.tensor(spectrum)
     
     rs =  spectrum[:wls_size, 1] / spectrum[:wls_size, 0]
     rp =  spectrum[wls_size:, 1] / spectrum[wls_size:, 0]
@@ -32,13 +36,31 @@ def E_to_tan2Psi(spectrum):
     
     return Rp / Rs
 
-
-def E_to_phase(spectrum):
+def E_to_Psi(spectrum):
     '''
     E: 2D TORCH tensor, (wls.shape[0] * 2, 2) (s+, p+ // s-, p-)
     returns tan^2 \Psi
     '''
     wls_size = spectrum.shape[0] // 2
+    if type(spectrum) is not torch.Tensor:
+        spectrum = torch.tensor(spectrum)
+    
+    rs =  spectrum[:wls_size, 1] / spectrum[:wls_size, 0]
+    rp =  spectrum[wls_size:, 1] / spectrum[wls_size:, 0]
+
+    Rs = (rs.conj() * rs).real
+    Rp = (rp.conj() * rp).real
+    
+    return (Rp / Rs).sqrt().arctan()
+
+def E_to_ephase(spectrum):
+    '''
+    E: 2D TORCH tensor, (wls.shape[0] * 2, 2) (s+, p+ // s-, p-)
+    returns e^{i\Delta}
+    '''
+    wls_size = spectrum.shape[0] // 2
+    if type(spectrum) is not torch.Tensor:
+        spectrum = torch.tensor(spectrum)
     
     rs =  spectrum[:wls_size, 1] / spectrum[:wls_size, 0]
     rp =  spectrum[wls_size:, 1] / spectrum[wls_size:, 0]

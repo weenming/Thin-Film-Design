@@ -73,7 +73,12 @@ class SpectrumSimple(BaseSpectrum):
         self.WLS = wavelengths
         self.n_sub = film.calculate_n_sub(self.WLS)
         self.n_inc = film.calculate_n_inc(self.WLS)
+        # spec: R, T
         self.spec = np.empty(self.WLS.shape[0] * 2)
+        # spec_E: E+s, E+p// E-s, E-p
+        self.spec_E = np.empty((self.WLS.shape[0] * 2, 2), dtype='complex128')
+        # spec_r: rs // rp
+        self.spec_r = np.empty((self.WLS.shape[0], 2), dtype='complex128')
         self.film = film
         self.updated = False
 
@@ -94,7 +99,7 @@ class SpectrumSimple(BaseSpectrum):
 
     def calculate_E(self, spec_func=get_E.get_E_free, **kwargs):
         spec_func(
-            self.spec,
+            self.spec_E,
             self.WLS,
             self.film.get_d(),
             self.film.calculate_n_array(self.WLS),
@@ -103,8 +108,17 @@ class SpectrumSimple(BaseSpectrum):
             self.INC_ANG, 
             **kwargs
         )
-        self.r = self.spec[:self.WLS.shape[0]]
-
+        # rs
+        self.spec_r[:, 0] = self.spec_E[:self.WLS.shape[0], 1] \
+              / self.spec_E[:self.WLS.shape[0], 0]
+        # rp
+        self.spec_r[:, 1] = self.spec_E[self.WLS.shape[0]:, 1] \
+              / self.spec_E[self.WLS.shape[0]:, 0]
+        
+    def outdate(self):
+        self.updated = False
+        self.updated_E = False
+        
     def get_R(self, **kwargs):
         self.calculate(**kwargs)
         return self.spec_R
@@ -115,16 +129,16 @@ class SpectrumSimple(BaseSpectrum):
 
     def get_r(self, **kwargs):
         self.calculate_E(**kwargs)
-        return self.r
+        return self.spec_r
     
     def get_tanPsi(self):
         r = self.get_r()
         rs = r[:, 0]
         rp = r[:, 1]
-        return np.abs(rs / rp)
+        return np.abs(rp / rs)
 
     def get_delta(self):
         r = self.get_r()
         rs = r[:, 0]
         rp = r[:, 1]
-        return np.angle(rs / rp)
+        return np.angle(rp / rs)

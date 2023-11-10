@@ -290,11 +290,11 @@ def forward_and_backward_propagation(
             continue
         calc_M_inv(Ms_inv, Mp_inv, n_inc, inc_ang,
                    n_arr[i + 1], d[i + 1], wl)
-        mul_left(Ms_inv, W_back_s)  # M_0^-1 to left
-        mul_left(Mp_inv, W_back_p)  # M_0^-1 to left
+        mul_left(Ms_inv, W_back_s)  # M_i^-1 to left
+        mul_left(Mp_inv, W_back_p)  # M_i^-1 to left
 
         calc_M(Ms, Mp, n_inc, inc_ang, n_arr[i], d[i], wl)
-        mul_right(W_front_s, Ms)  # M_0^-1 to left
-        mul_right(W_front_p, Mp)  # M_0^-1 to left
+        mul_right(W_front_s, Ms)  # M_i^-1 to left
+        mul_right(W_front_p, Mp)  # M_i^-1 to left
 
  

@@ -118,6 +118,9 @@ class SpectrumSimple(BaseSpectrum):
     def outdate(self):
         self.updated = False
         self.updated_E = False
+    
+    def is_updated(self):
+        return self.updated and self.updated_E
         
     def get_R(self, **kwargs):
         self.calculate(**kwargs)

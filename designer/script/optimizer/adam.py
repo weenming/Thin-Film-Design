@@ -3,8 +3,9 @@ sys.path.append('./designer/script/')
 
 
 from tmm.get_jacobi_n_adjoint import get_jacobi_free_form
-from tmm.get_jacobi_adjoint import get_jacobi_simple
+from tmm.get_jacobi_adjoint import get_jacobi_adjoint
 from tmm.get_spectrum import get_spectrum_free, get_spectrum_simple
+from tmm.autograd_wrapper import get_jacobi_warpper
 
 from optimizer.grad_helper import stack_f, stack_J, stack_init_params
 from utils.loss import calculate_RMS_f_spec, rms
@@ -29,7 +30,7 @@ class defined in optimizer.py.
 class AdamOptimizer(GradientOptimizer):
     """
     Implements the Adam optimization algorithm for thin film properties.
-
+    Well I should have used torch...
     ...
 
     Attributes
@@ -199,7 +200,7 @@ class AdamThicknessOptimizer(AdamOptimizer):
         )
 
         self.get_f = get_spectrum_simple
-        self.get_J = get_jacobi_simple
+        self.get_J = get_jacobi_adjoint
 
     def _set_param(self):
         # Project back to feasible domain
@@ -208,6 +209,7 @@ class AdamThicknessOptimizer(AdamOptimizer):
 
     def _get_param(self):
         self.x = self.film.get_d()
+
 
 
 class AdamFreeFormOptimizer(AdamOptimizer):
@@ -272,3 +274,57 @@ class AdamFreeFormOptimizer(AdamOptimizer):
 
     def _get_param(self):
         self.x = self.film.get_n()
+
+
+# AUTOGRAD
+class AdamThicknessOptimizerAutograd(AdamThicknessOptimizer):
+
+    def __init__(
+            self,
+            film,
+            target_spec_ls: Sequence[BaseSpectrum],
+            loss_fn, 
+            max_steps,
+            alpha=1,
+            **kwargs
+    ):
+        super().__init__(
+            film,
+            target_spec_ls,
+            max_steps,
+            alpha=alpha, 
+            **kwargs
+        )
+        self.get_grad_fn = get_jacobi_warpper(loss_fn, )
+        
+        if len(target_spec_ls) != 1:
+            raise NotImplementedError
+        
+        self.wls = self.target_spec_ls[0].WLS
+        self.inc_ang = self.target_spec_ls[0].INC_ANG
+        self.jacobi = np.zeros(
+            (
+                self.wls.shape[0] * 4, 
+                self.film.get_layer_number(), 
+                2, 
+                2
+            ), 
+            dtype='complex128'
+        )
+        
+    def _optimize_step(self):
+
+        self.g = self.get_grad_fn(
+            self.jacobi,
+            self.wls,
+            self.film.get_d(),
+            *self.n_arrs_ls[0],
+            self.inc_ang,
+        ).cpu().numpy()
+        self.m = self.beta1 * self.m + (1 - self.beta1) * self.g
+        self.v = self.beta2 * self.v + (1 - self.beta2) * self.g ** 2
+        self.m_hat = self.m / (1 - self.beta1 ** (self.i + 1))
+        self.v_hat = self.v / (1 - self.beta2 ** (self.i + 1))
+        self.x -= self.alpha * self.m_hat / \
+            (np.sqrt(self.v_hat) + self.epsilon)
+

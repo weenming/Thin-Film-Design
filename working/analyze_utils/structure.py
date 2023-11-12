@@ -168,7 +168,7 @@ def _calculate_structure_difference_simple_film_RMS(d1, n1_ls, d2, n2_ls, n_sub)
 
 
 def plot_layer_thickness(film: BaseFilm, n_at_wl=1000,
-                         truncate_thickness=float('inf')):
+                         truncate_thickness=float('inf'), fig=None, ax=None, **kwargs):
     '''
     Plots the refractive index distribution
 
@@ -176,6 +176,8 @@ def plot_layer_thickness(film: BaseFilm, n_at_wl=1000,
         film (BaseFilm): film structure to show
         n_at_wl (float): middle wl of the first spec
     '''
+    # plot setting
+    kwargs = {'color': 'steelblue'} | kwargs
     # get d vector
     if truncate_thickness != float('inf'):
         d = copy.deepcopy(film).get_d()
@@ -197,7 +199,8 @@ def plot_layer_thickness(film: BaseFilm, n_at_wl=1000,
     n_inc = film.calculate_n_inc(np.array([n_at_wl]))[0]
     n_sub = film.calculate_n_sub(np.array([n_at_wl]))[0]
 
-    fig, ax = plt.subplots(1, 1)
+    if fig is None or ax is None:
+        fig, ax = plt.subplots(1, 1)
     cur_d = 0
     for i in range(d.shape[0]):
         this_n = n_arr[i]
@@ -205,15 +208,15 @@ def plot_layer_thickness(film: BaseFilm, n_at_wl=1000,
             last_n = n_inc
         else:
             last_n = n_arr[i - 1]
-        ax.plot([cur_d, cur_d], [this_n, last_n], c='steelblue')
-        ax.plot([cur_d, cur_d + d[i]], [this_n, this_n], color='steelblue')
+        ax.plot([cur_d, cur_d], [this_n, last_n], **kwargs)
+        ax.plot([cur_d, cur_d + d[i]], [this_n, this_n], **kwargs)
         cur_d += d[i]
-    ax.plot([cur_d, cur_d], [this_n, n_sub])
+    ax.plot([cur_d, cur_d], [this_n, n_sub], **kwargs)
     # ax.set_xlim(0, 20000)
-    ax.set_xlabel('position / nm')
+    ax.set_xlabel('Position / nm')
     ax.set_xlim(0, None)
     ax.set_title(
-        f'refractive index distribution at {n_at_wl: .0f} nm')
+        f'Refractive index distribution at {n_at_wl: .0f} nm')
     fig.set_size_inches(6, 1)
     return ax, fig
 

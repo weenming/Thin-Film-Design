@@ -9,7 +9,7 @@ from spectrum import BaseSpectrum
 from optimizer.grad_helper import stack_f, stack_J, stack_init_params
 from tmm.get_jacobi_adjoint import get_jacobi_simple
 
-MAX_LAYER = 500
+MAX_LAYER = 50000
 
 
 def insert_1_layer(
@@ -106,11 +106,15 @@ def make_test_insert_film(film, insert_search_pts, split=False):
                       for j in range(insert_search_pts)]  # max: L(2N + 1) - 2
     d_before = film.get_d().copy()
     for i in range(film.get_layer_number()):
-
         for j in range(insert_search_pts):
             insert_position = 1 / insert_search_pts * d_before[i]
             # insert new layer: zero thickness
-            film.insert_layer(
-                j * 2 + i * (2 * insert_search_pts + 1), insert_position, 0)
-
+            try:
+                film.insert_layer(
+                    j * 2 + i * (2 * insert_search_pts + 1), insert_position, 0)
+            except Exception as e:
+                print(f'i:{i}, j: {j}')
+                print(e.args)
+                print('WARNING: there is a missing insertion layer at the interface.')
+                continue
     return insert_idx_arr

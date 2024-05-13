@@ -11,6 +11,7 @@ from film import TwoMaterialFilm
 import numpy as np
 from typing import Sequence
 import copy
+from tqdm import trange
 
 
 def adam_optimize(
@@ -67,7 +68,7 @@ def adam_optimize(
     m = 0
     v = 0
 
-    for t in range(max_steps):
+    for t in trange(max_steps):
         # shuffle for sgd
         spec_batch_idx = np.random.default_rng().choice(
             len(target_spec_ls),

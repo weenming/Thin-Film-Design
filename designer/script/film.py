@@ -326,9 +326,13 @@ class TwoMaterialFilm(BaseFilm):
 
     def insert_layer(self, layer_index, position, thickness):
         """
-        insert a layer at the specified position
+        Insert a layer at the specified position.
+        
+        Before:
             B  ||   A   ||  B
         insert at:  ^    (i == layer_index)
+        
+        After:
             B  ||A||B||A||  B
                  ^       (i == layer_index)
                     ^    (i == layer_index + 1)
@@ -337,8 +341,8 @@ class TwoMaterialFilm(BaseFilm):
         d = self.get_d()
         assert 0 <= layer_index < d.shape[0], 'invalid insert layer'
 
-        assert d[layer_index] >= position - 1e-5 and position >= 0, \
-            'invalid insert position'
+        assert (d[layer_index] >= position and position >= 0), \
+            f'invalid insert position: {d[layer_index]} should >= {position} >= 0'
 
         d = np.insert(d, [layer_index + 1, layer_index + 1], thickness)
         d[layer_index + 2] = max(d[layer_index] - position, 0)

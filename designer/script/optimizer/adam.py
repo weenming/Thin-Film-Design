@@ -15,6 +15,7 @@ from typing import Sequence
 import copy
 from optimizer.optimizer import GradientOptimizer
 from abc import abstractmethod
+from tqdm import trange
 
 """adam.py - Adam optimizer for thin film properties.
 
@@ -113,7 +114,7 @@ class AdamOptimizer(GradientOptimizer):
         # in case not do_record, return [initial film], [initial loss]
         self._record()
 
-        for self.i in range(self.max_steps):
+        for self.i in trange(self.max_steps):
             self._optimize_step()
             self._set_param()
             if self.is_recorded:

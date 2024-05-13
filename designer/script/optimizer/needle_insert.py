@@ -9,7 +9,7 @@ from spectrum import BaseSpectrum
 from optimizer.grad_helper import stack_f, stack_J, stack_init_params
 from tmm.get_jacobi_adjoint import get_jacobi_simple
 
-MAX_LAYER = 50000
+MAX_LAYER = 50000000000
 
 
 def insert_1_layer(

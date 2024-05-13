@@ -2,6 +2,7 @@ import numpy as np
 import copy
 from typing import TypedDict, Sequence
 
+from optimizer.adam import AdamOptimizer, AdamThicknessOptimizer
 import optimizer.needle_insert as insert
 import optimizer.archive.LM_gradient_descent as LM_gd
 from optimizer.archive.adam_d import adam_optimize
@@ -136,9 +137,12 @@ class NeedleDesign(BaseDesign):
 
 
 class ThicknessGradientDesign(BaseDesign):
+    
     def adam_gd(self, step, record=True, **kwargs):
+        self.adam = AdamThicknessOptimizer(self.film, self.target_specs, step, record=record, **kwargs)
+
         if record:
-            losses, films = adam_optimize(
+            losses, films = self.adam.optimize(
                 self.film,
                 self.target_specs,
                 step,
@@ -152,7 +156,7 @@ class ThicknessGradientDesign(BaseDesign):
                     'step': i
                 })
         else:
-            adam_optimize(
+            self.adam.optimize(
                 self.film,
                 self.target_specs,
                 step,

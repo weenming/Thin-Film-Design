@@ -7,7 +7,7 @@ import copy
 from film import TwoMaterialFilm
 from spectrum import BaseSpectrum
 from optimizer.grad_helper import stack_f, stack_J, stack_init_params
-from tmm.get_insert_jacobi import get_insert_jacobi_simple
+from tmm.get_jacobi_adjoint import get_jacobi_simple
 
 MAX_LAYER = 500
 
@@ -80,7 +80,7 @@ def get_insert_grad(film: TwoMaterialFilm, target_spec_ls):
         n_arrs_ls,
         d,
         target_spec_ls,
-        get_J=get_insert_jacobi_simple, # this function only returns wl * 1 (no T spec)
+        get_J=get_jacobi_simple, # this function only returns wl * 1 (no T spec)
     )
 
     # find insertion place with largest negative gradient

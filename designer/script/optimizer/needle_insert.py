@@ -107,7 +107,7 @@ def make_test_insert_film(film, insert_search_pts, split=False):
     d_before = film.get_d().copy()
     for i in range(film.get_layer_number()):
         for j in range(insert_search_pts):
-            insert_position = 1 / insert_search_pts * d_before[i]
+            insert_position = 1 / (insert_search_pts + 1) * d_before[i]
             # insert new layer: zero thickness
             try:
                 film.insert_layer(

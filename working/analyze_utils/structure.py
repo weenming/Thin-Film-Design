@@ -168,7 +168,7 @@ def _calculate_structure_difference_simple_film_RMS(d1, n1_ls, d2, n2_ls, n_sub)
 
 
 def plot_layer_thickness(film: BaseFilm, n_at_wl=1000,
-                         truncate_thickness=float('inf')):
+                         truncate_thickness=float('inf'), ax=None):
     '''
     Plots the refractive index distribution
 
@@ -197,7 +197,12 @@ def plot_layer_thickness(film: BaseFilm, n_at_wl=1000,
     n_inc = film.calculate_n_inc(np.array([n_at_wl]))[0]
     n_sub = film.calculate_n_sub(np.array([n_at_wl]))[0]
 
-    fig, ax = plt.subplots(1, 1)
+    if ax is None:
+        new_fig = True
+        fig, ax = plt.subplots(1, 1)
+    else:
+        new_fig = False
+
     cur_d = 0
     for i in range(d.shape[0]):
         this_n = n_arr[i]
@@ -210,12 +215,16 @@ def plot_layer_thickness(film: BaseFilm, n_at_wl=1000,
         cur_d += d[i]
     ax.plot([cur_d, cur_d], [this_n, n_sub])
     # ax.set_xlim(0, 20000)
-    ax.set_xlabel('position / nm')
-    ax.set_xlim(0, None)
-    ax.set_title(
-        f'refractive index distribution at {n_at_wl: .0f} nm')
-    fig.set_size_inches(6, 1)
-    return ax, fig
+
+    if new_fig:
+        ax.set_xlabel('position / nm')
+        ax.set_xlim(0, None)
+        ax.set_title(
+            f'refractive index distribution at {n_at_wl: .0f} nm')
+        
+        fig.set_size_inches(6, 1)
+        return ax, fig
+    
 
 
 def show_design_process(design: BaseDesign):

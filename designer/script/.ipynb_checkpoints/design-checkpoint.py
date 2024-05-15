@@ -142,7 +142,7 @@ class ThicknessGradientDesign(BaseDesign):
         self.adam = AdamThicknessOptimizer(self.film, self.target_specs, step, record=record, **kwargs)
 
         if record:
-            films, losses = self.adam.optimize()
+            losses, films = self.adam.optimize()
             for i, (loss, film) in enumerate(zip(losses, films)):
                 self.training_info.append({
                     'loss': loss,

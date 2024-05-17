@@ -93,17 +93,25 @@ class AdamOptimizer(GradientOptimizer):
         self.beta1 = 0.9 if 'beta1' not in kwargs else kwargs['beta1']
         self.beta2 = 0.999 if 'beta2' not in kwargs else kwargs['beta2']
         self.epsilon = 1e-8 if 'epsilon' not in kwargs else kwargs['epsilon']
-
+        
         # initialize optimizer
         self.max_steps = max_steps
         self.max_patience = self.max_steps if 'patience' not in kwargs else kwargs[
             'patience']
-        self.current_patience = self.max_patience
         self.best_loss = 0.
+        self.init_adam_optimizer()
+        self.init_set_params()
+        
+    def init_adam_optimizer(self):
+        
+        self.current_patience = self.max_patience
         self.m = 0
-        self.v = 0  # adam hyperparameters
-        self.n_arrs_ls = stack_init_params(self.film, self.target_spec_ls)
+        self.v = 0  # adam momentum etc.
+        
 
+    def init_set_params(self,):
+        # calculate self n_arr
+        self.n_arrs_ls = stack_init_params(self.film, self.target_spec_ls)
         self._get_param()  # init variable x
 
         # allocate space for f and J
@@ -116,8 +124,9 @@ class AdamOptimizer(GradientOptimizer):
 
         for self.i in trange(self.max_steps):
             self._optimize_step()
+            
             self._set_param()
-            if self.is_recorded:
+            if self.is_recorded(self.i):
                 self._record()
             if self.is_shown:
                 self._show()
@@ -160,6 +169,7 @@ class AdamOptimizer(GradientOptimizer):
         self.v_hat = self.v / (1 - self.beta2 ** (self.i + 1))
         self.x -= self.alpha * self.m_hat / \
             (np.sqrt(self.v_hat) + self.epsilon)
+        
 
 
 class AdamThicknessOptimizer(AdamOptimizer):
@@ -170,6 +180,7 @@ class AdamThicknessOptimizer(AdamOptimizer):
             target_spec_ls: Sequence[BaseSpectrum],
             max_steps,
             alpha=1,
+            remove_nonpos_during_optm=False, 
             **kwargs
     ):
         """
@@ -201,11 +212,25 @@ class AdamThicknessOptimizer(AdamOptimizer):
 
         self.get_f = get_spectrum_simple
         self.get_J = get_jacobi_simple
+        if remove_nonpos_during_optm:
+            print('WARNING: not tested!')
+        self.remove_nonpos_during_optm = remove_nonpos_during_optm
+
 
     def _set_param(self):
         # Project back to feasible domain
+
         self.x[self.x < 0] = 0.
         self.film.update_d(self.x)
+        
+        if self.remove_nonpos_during_optm:
+            assert self.film is TwoMaterialFilm or self.film, 'Can only remove non-positive layers and merge for TwoMaetrialFilm'
+            layer_before = self.film.get_layer_number()
+            self.film.remove_negative_thickness_layer()
+            if self.film.get_layer_number() < layer_before:
+                print('Layer removed.\nWARNING: not tested')
+                self.init_set_params()
+                self.init_adam_optimizer()
 
     def _get_param(self):
         self.x = self.film.get_d()

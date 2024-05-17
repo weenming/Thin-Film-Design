@@ -298,13 +298,13 @@ class TwoMaterialFilm(BaseFilm):
     def check_thickness(self):
         assert np.min(self.d) > 0, "layers of zero thickness!"
 
-    def remove_negative_thickness_layer(self, exclude=[]):
+    def remove_negative_thickness_layer(self, exclude=[], zero=0):
         indices = []
         d = self.get_d()
         # first layer is never removed
         i = 1
         while i < d.shape[0] - 1:
-            if d[i] <= 0 and i not in exclude:
+            if d[i] <= zero and i not in exclude:
                 d[i - 1] += d[i + 1]
                 d = np.delete(d, [i, i + 1])
                 exclude = [x - 2 for x in exclude]

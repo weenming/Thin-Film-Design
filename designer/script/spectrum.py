@@ -42,6 +42,7 @@ class Spectrum(BaseSpectrum):
     def __init__(self, incident_angle, wavelengths, spec_R, spec_T=None):
         if spec_T is None:
             spec_T = 1 - spec_R
+        assert wavelengths.shape[0] == spec_R.shape[0] == spec_T.shape[0]
 
         super().__init__(incident_angle, wavelengths, spec_R, spec_T)
 

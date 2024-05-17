@@ -68,9 +68,9 @@ class GradientOptimizer(Optimizer):
         super().__init__(film, target_spec_ls)
 
         # user functionalities
-        self.is_recorded = False if 'record' not in kwargs else kwargs['record']
+        self.is_recorded = lambda i: False if 'record' not in kwargs else kwargs['record']
         self.is_shown = False if 'show' not in kwargs else kwargs['show']
-        self.shown_condition = lambda x: True if 'show_condition' not in kwargs else kwargs['show_condition']
+        self.shown_condition = lambda x: True if 'show_condition' not in kwargs else kwargs['show_condition'](x)
         self.records: list[list] = []
 
         # check batch size

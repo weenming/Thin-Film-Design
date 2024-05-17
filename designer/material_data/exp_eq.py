@@ -27,3 +27,12 @@ def get_n_SiO2_Cauchy(wl):
 def get_n_MgF2_Cauchy(wl):
     wl = wl * 1e-3
     return 1.384 - 3.651e-3 / wl ** 2 + 6.429e-4 / wl ** 4
+
+
+def get_n_BK7_Sellmeier(wl):
+    wl = wl * 1e-3
+    return np.sqrt(
+        1 + 1.03961212 * wl ** 2 / (wl ** 2 - 0.00600069867)\
+            + 0.231792344 * wl ** 2 / (wl ** 2 - 0.0200179144)\
+            + 1.01046945 * wl ** 2 / (wl ** 2 - 103.560653)
+    )

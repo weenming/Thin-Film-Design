@@ -12,6 +12,7 @@ from utils.loss import calculate_RMS_f_spec, rms
 from spectrum import BaseSpectrum
 from film import FreeFormFilm, TwoMaterialFilm
 import numpy as np
+import torch
 from typing import Sequence
 import copy
 from optimizer.optimizer import GradientOptimizer
@@ -295,6 +296,7 @@ class AdamThicknessOptimizerAutograd(AdamThicknessOptimizer):
             alpha=alpha, 
             **kwargs
         )
+        self.loss_fn = loss_fn
         self.get_grad_fn = get_jacobi_warpper(loss_fn, )
         
         if len(target_spec_ls) != 1:
@@ -312,6 +314,16 @@ class AdamThicknessOptimizerAutograd(AdamThicknessOptimizer):
             dtype='complex128'
         )
         
+        if 'eval_loss' in kwargs:   
+            self.eval_loss = kwargs['eval_loss']
+        else:
+            self.eval_loss = self.default_eval_loss
+    
+    def default_eval_loss(self, film):
+        self.film.get_spec().calculate_E()
+        E_tensor = torch.tensor(copy.deepcopy(film.get_spec().spec_E), device='cuda')
+        return self.loss_fn(E_tensor)
+
     def _optimize_step(self):
 
         self.g = self.get_grad_fn(
@@ -328,3 +340,8 @@ class AdamThicknessOptimizerAutograd(AdamThicknessOptimizer):
         self.x -= self.alpha * self.m_hat / \
             (np.sqrt(self.v_hat) + self.epsilon)
 
+
+    def _validate_loss(self):
+        # return rms(self.f)
+        
+        return self.eval_loss(self.film)
